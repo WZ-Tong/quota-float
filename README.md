@@ -27,11 +27,13 @@
    - OpenCode Go API Key
 3. 保存。输入框留空表示保持原 Key；设置页只显示掩码。
 4. 右键菜单：
-   - 立即刷新 / 设置…
+   - 立即刷新
    - 显示余额等式：开关 DeepSeek 等式
+   - 显示 DeepSeek / 显示 OpenCode：分别控制两张卡片
    - 窗口置顶
    - 主题 → 跟随系统 / 浅色 / 深色
    - 锁定宽度
+   - 设置…
    - 退出
 
 ## 余额等式
@@ -68,6 +70,7 @@ QuotaFloat.exe --demo          :: 示例数据，不读写真实配置
 QuotaFloat.exe --demo --light  :: 亮色预览
 QuotaFloat.exe --demo --dark   :: 暗色预览
 QuotaFloat.exe --demo --wide   :: 宽窗口预览
+QuotaFloat.exe --demo --only-ds / --only-go / --no-equation / --no-cards
 QuotaFloat.exe --settings      :: 启动时打开设置
 ```
 

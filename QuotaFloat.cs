@@ -121,6 +121,8 @@ namespace QuotaFloat
         public bool WidthLocked;
         public int ThemeMode;
         public bool EquationEnabled = true;
+        public bool ShowDeepSeek = true;
+        public bool ShowOpenCode = true;
         public decimal DeepSeekTotal;
         public bool DeepSeekHasTotal;
         public decimal DeepSeekBalance;
@@ -159,7 +161,10 @@ namespace QuotaFloat
                 if (c.WindowWidth > 720) c.WindowWidth = 720;
                 c.WidthLocked = GetBool(d, "widthLocked", false);
                 c.ThemeMode = GetInt(d, "themeMode", 0);
+                if (c.ThemeMode < 0 || c.ThemeMode > 2) c.ThemeMode = 0;
                 c.EquationEnabled = GetBool(d, "equationEnabled", true);
+                c.ShowDeepSeek = GetBool(d, "showDeepSeek", true);
+                c.ShowOpenCode = GetBool(d, "showOpenCode", true);
                 c.DeepSeekTotal = GetDecimal(d, "deepseekTotal", 0m);
                 c.DeepSeekHasTotal = GetBool(d, "deepseekHasTotal", false);
                 c.DeepSeekBalance = GetDecimal(d, "deepseekBalance", 0m);
@@ -187,6 +192,8 @@ namespace QuotaFloat
                 d["widthLocked"] = WidthLocked;
                 d["themeMode"] = ThemeMode;
                 d["equationEnabled"] = EquationEnabled;
+                d["showDeepSeek"] = ShowDeepSeek;
+                d["showOpenCode"] = ShowOpenCode;
                 d["deepseekTotal"] = DeepSeekTotal;
                 d["deepseekHasTotal"] = DeepSeekHasTotal;
                 d["deepseekBalance"] = DeepSeekBalance;
@@ -364,7 +371,6 @@ namespace QuotaFloat
         public DateTimeOffset? ResetsAt;
 
         private readonly Font captionFont = new Font("Segoe UI", 8.25F);
-        private readonly Font suffixFont = new Font("Segoe UI", 7.25F);
 
         public UsageRow()
         {
@@ -416,7 +422,7 @@ namespace QuotaFloat
             int suffixW = w - 84 - suffixLeft;
             if (suffixW > 10)
             {
-                TextRenderer.DrawText(g, suffix, suffixFont, new Rectangle(suffixLeft, 0, suffixW, 16),
+                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, 16),
                     suffixColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
@@ -445,7 +451,6 @@ namespace QuotaFloat
             if (disposing)
             {
                 captionFont.Dispose();
-                suffixFont.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -456,6 +461,7 @@ namespace QuotaFloat
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int HT_CAPTION = 0x2;
         private const int CS_DROPSHADOW = 0x20000;
+        private const int WM_EXITSIZEMOVE = 0x0232;
         private const int RefreshSeconds = 60;
 
         [DllImport("user32.dll")]
@@ -509,13 +515,20 @@ namespace QuotaFloat
             demoMode = HasArg("--demo");
             int demoWidth = HasArg("--wide") ? 700 : 380;
             cfg = demoMode ? new AppConfig { WindowWidth = demoWidth, NoSave = true } : AppConfig.Load();
+            if (demoMode)
+            {
+                if (HasArg("--only-ds")) cfg.ShowOpenCode = false;
+                if (HasArg("--only-go")) cfg.ShowDeepSeek = false;
+                if (HasArg("--no-cards")) { cfg.ShowDeepSeek = false; cfg.ShowOpenCode = false; }
+                if (HasArg("--no-equation")) cfg.EquationEnabled = false;
+            }
             lightTheme = HasArg("--light") ? true : (HasArg("--dark") ? false : ResolveLightTheme());
             Palette.Apply(lightTheme);
 
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F);
             int startWidth = Math.Max(360, Math.Min(720, cfg.WindowWidth));
-            ClientSize = new Size(startWidth, 228);
+            ClientSize = new Size(startWidth, 236);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             BackColor = Palette.Bg;
@@ -528,7 +541,7 @@ namespace QuotaFloat
             catch { }
 
             dsCard = new Card();
-            dsCard.Bounds = new Rectangle(12, 8, ClientSize.Width - 24, 72);
+            dsCard.Bounds = new Rectangle(12, 12, ClientSize.Width - 24, 72);
             Controls.Add(dsCard);
 
             Label dsTitle = NewLabel("DeepSeek", 14, 8, 120, 16, 8.25F, FontStyle.Regular, Palette.Sub);
@@ -542,7 +555,7 @@ namespace QuotaFloat
             deepSeekStatus.TextAlign = ContentAlignment.MiddleLeft;
             dsCard.Controls.Add(deepSeekStatus);
 
-            deepSeekBalanceOnly = NewLabel("—", 14, 26, dsCard.Width - 28, 40, 12F, FontStyle.Bold, Palette.Text);
+            deepSeekBalanceOnly = NewLabel("—", 14, 26, dsCard.Width - 28, 40, 14F, FontStyle.Bold, Palette.Text);
             deepSeekBalanceOnly.BackColor = Palette.Card;
             deepSeekBalanceOnly.TextAlign = ContentAlignment.MiddleLeft;
             deepSeekBalanceOnly.Visible = false;
@@ -596,13 +609,13 @@ namespace QuotaFloat
             inlineEditor.KeyDown += EditorKeyDown;
 
             refreshBar = new MiniBar();
-            refreshBar.Bounds = new Rectangle(14, 86, ClientSize.Width - 28, 2);
-            refreshBar.FillColor = Palette.Blue;
+            refreshBar.Bounds = new Rectangle(14, 89, ClientSize.Width - 28, 4);
+            refreshBar.FillColor = Palette.Red;
             refreshBar.BackColor = Palette.Bg;
             Controls.Add(refreshBar);
 
             goCard = new Card();
-            goCard.Bounds = new Rectangle(12, 94, ClientSize.Width - 24, 126);
+            goCard.Bounds = new Rectangle(12, 98, ClientSize.Width - 24, 126);
             Controls.Add(goCard);
 
             Label goTitle = NewLabel("OpenCode", 14, 8, 160, 16, 8.25F, FontStyle.Regular, Palette.Sub);
@@ -617,7 +630,6 @@ namespace QuotaFloat
 
             menu = new ContextMenuStrip();
             menu.Items.Add("立即刷新", null, delegate { StartFetch(); });
-            menu.Items.Add("设置…", null, delegate { OpenSettings(); });
             ToolStripMenuItem eqItem = new ToolStripMenuItem("显示余额等式");
             eqItem.Checked = cfg.EquationEnabled;
             eqItem.Click += delegate
@@ -628,6 +640,26 @@ namespace QuotaFloat
                 UpdateDisplay();
             };
             menu.Items.Add(eqItem);
+            ToolStripMenuItem showDsItem = new ToolStripMenuItem("显示 DeepSeek");
+            showDsItem.Checked = cfg.ShowDeepSeek;
+            showDsItem.Click += delegate
+            {
+                cfg.ShowDeepSeek = !cfg.ShowDeepSeek;
+                showDsItem.Checked = cfg.ShowDeepSeek;
+                UpdateProviderLayout();
+                cfg.Save();
+            };
+            menu.Items.Add(showDsItem);
+            ToolStripMenuItem showGoItem = new ToolStripMenuItem("显示 OpenCode");
+            showGoItem.Checked = cfg.ShowOpenCode;
+            showGoItem.Click += delegate
+            {
+                cfg.ShowOpenCode = !cfg.ShowOpenCode;
+                showGoItem.Checked = cfg.ShowOpenCode;
+                UpdateProviderLayout();
+                cfg.Save();
+            };
+            menu.Items.Add(showGoItem);
             ToolStripMenuItem top = new ToolStripMenuItem("窗口置顶");
             top.Checked = TopMost;
             top.Click += delegate
@@ -680,6 +712,7 @@ namespace QuotaFloat
             };
             menu.Items.Add(lockItem);
             menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("设置…", null, delegate { OpenSettings(); });
             menu.Items.Add("退出", null, delegate { Close(); });
             ContextMenuStrip = menu;
             AttachMenu(this);
@@ -693,6 +726,7 @@ namespace QuotaFloat
             AttachDrag(goCard);
 
             LayoutContent();
+            UpdateProviderLayout();
             UpdatePeakBadge();
 
             if (cfg.DeepSeekKey.Length > 0 && cfg.DeepSeekBalanceKnown)
@@ -786,6 +820,59 @@ namespace QuotaFloat
                 dsCard.Top + equationPanel.Top + l.Top,
                 l.Width,
                 l.Height);
+        }
+
+        private void UpdateProviderLayout()
+        {
+            if (dsCard == null || goCard == null || refreshBar == null) return;
+            bool ds = cfg.ShowDeepSeek;
+            bool go = cfg.ShowOpenCode;
+            dsCard.Visible = ds;
+            goCard.Visible = go;
+
+            const int pad = 12;
+            const int gap = 5;
+            int w = ClientSize.Width;
+            int top = pad;
+
+            if (ds)
+            {
+                dsCard.Bounds = new Rectangle(12, top, w - 24, 72);
+                top += 72;
+            }
+
+            if (ds && go)
+            {
+                refreshBar.Bounds = new Rectangle(14, top + gap, w - 28, 4);
+                top = refreshBar.Bottom + gap;
+            }
+
+            if (go)
+            {
+                goCard.Bounds = new Rectangle(12, top, w - 24, 126);
+                top += 126;
+            }
+
+            if (!ds || !go)
+            {
+                refreshBar.Bounds = new Rectangle(14, (ds || go) ? top + gap : pad, w - 28, 4);
+                top = refreshBar.Bottom;
+            }
+
+            refreshBar.Visible = true;
+            int height = top + pad;
+            if (ClientSize.Height != height)
+            {
+                ClientSize = new Size(ClientSize.Width, height);
+                if (IsHandleCreated)
+                {
+                    Rectangle wa = Screen.FromControl(this).WorkingArea;
+                    if (Bottom > wa.Bottom) Top = Math.Max(wa.Top, wa.Bottom - Height);
+                }
+            }
+
+            LayoutContent();
+            Invalidate(true);
         }
 
         // ---------- 等式内联编辑 ----------
@@ -988,7 +1075,7 @@ namespace QuotaFloat
             BackColor = Palette.Bg;
 
             dsBar.FillColor = Palette.Blue;
-            refreshBar.FillColor = Palette.Blue;
+            refreshBar.FillColor = Palette.Red;
             RecolorControls(this, oldSub, oldText, oldRed, oldGreen, oldYellow, oldCard);
             Invalidate(true);
         }
@@ -1041,9 +1128,7 @@ namespace QuotaFloat
             lastDeepSeekBalanceKnown = true;
             cfg.DeepSeekTotal = 200m;
             cfg.DeepSeekHasTotal = true;
-            equationPanel.Visible = true;
-            deepSeekStatus.Visible = false;
-            UpdateEquationFields();
+            UpdateDisplay();
 
             row5h.Configured = true;
             row5h.Error = "";
@@ -1143,7 +1228,7 @@ namespace QuotaFloat
                 }
             }
 
-            if (p.Y <= 34)
+            if (p.Y <= 38)
             {
                 DateTime now = DateTime.UtcNow;
                 if ((now - lastHeaderClick).TotalMilliseconds > 800) headerClicks = 0;
@@ -1200,6 +1285,8 @@ namespace QuotaFloat
             Capture = false;
             Cursor = Cursors.Default;
             cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+            cfg.X = Left;
+            cfg.Y = Top;
             cfg.Save();
         }
 
@@ -1216,6 +1303,13 @@ namespace QuotaFloat
 
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WM_EXITSIZEMOVE)
+            {
+                cfg.X = Left;
+                cfg.Y = Top;
+                cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+                cfg.Save();
+            }
             if (m.Msg == 0x001A || m.Msg == 0x031A)
             {
                 if (cfg.ThemeMode == 0)
