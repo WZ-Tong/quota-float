@@ -4,6 +4,10 @@
 
 ![icon](icon.svg)
 
+## 下载
+
+- [最新版本](https://github.com/WZ-Tong/quota-float/releases/latest)（`QuotaFloat.exe`）
+
 ## 功能
 
 - DeepSeek 余额；可选余额等式：`余额 + 花费 = 总额`，双击数值原位编辑，自动算出另一项；初始无总额时按 `+0` 显示。
@@ -55,7 +59,7 @@ Windows 10/11 自带 .NET Framework 4.x，可直接用系统 `csc.exe` 编译，
   QuotaFloat.cs
 ```
 
-仓库内含已编译的 `QuotaFloat.exe`。
+仓库内含已编译的 `QuotaFloat.exe`，Releases 中也提供同样的二进制。
 
 ## 调试
 
