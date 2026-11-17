@@ -16,6 +16,7 @@
 - 每 60 秒自动刷新，卡片间细条显示下次刷新进度。
 - 黑/白主题：默认跟随系统，也可右键强制浅色/深色。
 - 无标题栏；不出现在任务栏和 Alt+Tab；左右边缘可直接拖动宽度，支持锁定并持久化。
+- 贴边滑出：拖到屏幕边缘松开后吸附；鼠标移出约 0.45 秒后，窗口用动画滑出屏幕，只在边缘保留 10px 的边；鼠标移入立即滑回，停留期间不自动收起。滑出只改位置，窗口宽高保持原尺寸。贴边时边缘指示条显示剩余比例，与内部进度条一致（100% 为全填充），长度几乎贯穿整条边；轨道使用更深底色标出 100% 范围。OpenCode 按 5 小时剩余量分级填充（绿/黄/红），无 OpenCode 数据时显示 DeepSeek 余额比例（蓝），无数据为空轨道。展开时指示条随窗口一起被拉出并同步淡出，收起时同步淡入。
 - 右键菜单提供设置、主题、等式开关、宽度锁定和退出；三击顶部也可打开设置。
 - 所有配置保存在本机 `%APPDATA%\QuotaFloat\config.json`，API Key 使用 Windows DPAPI（CurrentUser）加密，不上传。
 
@@ -33,6 +34,7 @@
    - 窗口置顶
    - 主题 → 跟随系统 / 浅色 / 深色
    - 锁定宽度
+   - 贴边吸附：开关贴边与自动滑出行为；关闭后窗口可自由摆放，不吸边
    - 设置…
    - 退出
 
@@ -70,7 +72,7 @@ QuotaFloat.exe --demo          :: 示例数据，不读写真实配置
 QuotaFloat.exe --demo --light  :: 亮色预览
 QuotaFloat.exe --demo --dark   :: 暗色预览
 QuotaFloat.exe --demo --wide   :: 宽窗口预览
-QuotaFloat.exe --demo --only-ds / --only-go / --no-equation / --no-cards
+QuotaFloat.exe --demo --only-ds / --only-go / --no-equation / --no-cards / --no-edge
 QuotaFloat.exe --settings      :: 启动时打开设置
 ```
 

@@ -41,6 +41,7 @@ namespace QuotaFloat
         public static Color Red = Color.FromArgb(242, 109, 109);
         public static Color Blue = Color.FromArgb(77, 107, 254);
         public static Color BarBg = Color.FromArgb(58, 58, 68);
+        public static Color Track = Color.FromArgb(10, 10, 14);
         public static Color InputBg = Color.FromArgb(46, 46, 54);
 
         public static void Apply(bool light)
@@ -58,6 +59,7 @@ namespace QuotaFloat
                 Red = Color.FromArgb(196, 56, 56);
                 Blue = Color.FromArgb(64, 88, 236);
                 BarBg = Color.FromArgb(226, 226, 234);
+                Track = Color.FromArgb(190, 190, 202);
                 InputBg = Color.FromArgb(238, 238, 244);
             }
             else
@@ -73,6 +75,7 @@ namespace QuotaFloat
                 Red = Color.FromArgb(242, 109, 109);
                 Blue = Color.FromArgb(77, 107, 254);
                 BarBg = Color.FromArgb(58, 58, 68);
+                Track = Color.FromArgb(10, 10, 14);
                 InputBg = Color.FromArgb(46, 46, 54);
             }
         }
@@ -119,6 +122,7 @@ namespace QuotaFloat
         public string OpenCodeKey = "";
         public int WindowWidth = 380;
         public bool WidthLocked;
+        public bool EdgeHide = true;
         public int ThemeMode;
         public bool EquationEnabled = true;
         public bool ShowDeepSeek = true;
@@ -160,6 +164,7 @@ namespace QuotaFloat
                 if (c.WindowWidth < 360) c.WindowWidth = 360;
                 if (c.WindowWidth > 720) c.WindowWidth = 720;
                 c.WidthLocked = GetBool(d, "widthLocked", false);
+                c.EdgeHide = GetBool(d, "edgeHide", true);
                 c.ThemeMode = GetInt(d, "themeMode", 0);
                 if (c.ThemeMode < 0 || c.ThemeMode > 2) c.ThemeMode = 0;
                 c.EquationEnabled = GetBool(d, "equationEnabled", true);
@@ -190,6 +195,7 @@ namespace QuotaFloat
                 d["opencodeKey"] = Protect(OpenCodeKey);
                 d["windowWidth"] = WindowWidth;
                 d["widthLocked"] = WidthLocked;
+                d["edgeHide"] = EdgeHide;
                 d["themeMode"] = ThemeMode;
                 d["equationEnabled"] = EquationEnabled;
                 d["showDeepSeek"] = ShowDeepSeek;
@@ -463,6 +469,10 @@ namespace QuotaFloat
         private const int CS_DROPSHADOW = 0x20000;
         private const int WM_EXITSIZEMOVE = 0x0232;
         private const int RefreshSeconds = 60;
+        private const int EdgeStrip = 10;
+        private const int SlideDuration = 180;
+        private const int HideDelay = 450;
+        private const int DockTolerance = 14;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -472,6 +482,8 @@ namespace QuotaFloat
         private readonly bool demoMode;
         private readonly Timer uiTimer;
         private readonly Timer barTimer;
+        private readonly Timer edgeTimer;
+        private readonly Timer slideTimer;
         private readonly Label deepSeekBalance;
         private readonly Label deepSeekPeriod;
         private readonly Label deepSeekStatus;
@@ -488,6 +500,7 @@ namespace QuotaFloat
         private readonly UsageRow rowWeek;
         private readonly UsageRow rowMonth;
         private readonly ContextMenuStrip menu;
+        private ToolStripMenuItem edgeHideItem;
 
         private bool fetching;
         private DateTime lastFetch = DateTime.MinValue;
@@ -499,6 +512,18 @@ namespace QuotaFloat
         private int resizeEdge;
         private int resizeStartX;
         private Rectangle resizeStartBounds;
+        private int dockedEdge;
+        private bool edgeArmed;
+        private bool edgeHidden;
+        private bool slideAnimating;
+        private bool slideOutTarget;
+        private Point slideFrom;
+        private Point slideTo;
+        private int slideStartTick;
+        private float hintAlpha;
+        private float hintFrom;
+        private float hintTo;
+        private DateTime lastInside = DateTime.UtcNow;
         private int editingField;
         private decimal lastDeepSeekBalance;
         private bool lastDeepSeekBalanceKnown;
@@ -521,6 +546,7 @@ namespace QuotaFloat
                 if (HasArg("--only-go")) cfg.ShowDeepSeek = false;
                 if (HasArg("--no-cards")) { cfg.ShowDeepSeek = false; cfg.ShowOpenCode = false; }
                 if (HasArg("--no-equation")) cfg.EquationEnabled = false;
+                if (HasArg("--no-edge")) cfg.EdgeHide = false;
             }
             lightTheme = HasArg("--light") ? true : (HasArg("--dark") ? false : ResolveLightTheme());
             Palette.Apply(lightTheme);
@@ -711,6 +737,17 @@ namespace QuotaFloat
                 cfg.Save();
             };
             menu.Items.Add(lockItem);
+            edgeHideItem = new ToolStripMenuItem("贴边吸附");
+            edgeHideItem.ToolTipText = "拖到屏幕边缘时吸附，鼠标移出后自动滑出";
+            edgeHideItem.Checked = cfg.EdgeHide;
+            edgeHideItem.Click += delegate
+            {
+                cfg.EdgeHide = !cfg.EdgeHide;
+                edgeHideItem.Checked = cfg.EdgeHide;
+                cfg.Save();
+                ApplyEdgeHideSetting();
+            };
+            menu.Items.Add(edgeHideItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("设置…", null, delegate { OpenSettings(); });
             menu.Items.Add("退出", null, delegate { Close(); });
@@ -720,6 +757,14 @@ namespace QuotaFloat
             MouseDown += DragWindow;
             MouseMove += ResizeMouseMove;
             MouseUp += ResizeMouseUp;
+            MouseEnter += delegate
+            {
+                lastInside = DateTime.UtcNow;
+                if (!cfg.EdgeHide || dockedEdge == 0) return;
+                edgeArmed = true;
+                edgeTimer.Start();
+                if (edgeHidden || (slideAnimating && slideOutTarget)) ShowEdge();
+            };
             MouseLeave += delegate { if (!resizing) Cursor = Cursors.Default; };
             AttachDrag(dsCard);
             AttachDrag(refreshBar);
@@ -745,6 +790,7 @@ namespace QuotaFloat
                 row5h.Invalidate();
                 rowWeek.Invalidate();
                 rowMonth.Invalidate();
+                if (edgeHidden || hintAlpha > 0f) Invalidate();
                 if (!demoMode && !refreshingPaused && !fetching && (DateTime.Now - lastFetch).TotalSeconds >= RefreshSeconds)
                     StartFetch();
             };
@@ -761,6 +807,14 @@ namespace QuotaFloat
                 refreshBar.Percent = remain * 100f;
                 refreshBar.Invalidate();
             };
+
+            edgeTimer = new Timer();
+            edgeTimer.Interval = 120;
+            edgeTimer.Tick += delegate { TickEdge(); };
+
+            slideTimer = new Timer();
+            slideTimer.Interval = 15;
+            slideTimer.Tick += delegate { TickSlide(); };
         }
 
         private Label NewLabel(string text, int x, int y, int w, int h, float size, FontStyle style, Color color)
@@ -873,6 +927,296 @@ namespace QuotaFloat
 
             LayoutContent();
             Invalidate(true);
+        }
+
+        // ---------- 贴边滑出 / 悬停恢复 ----------
+        private int DockEdge()
+        {
+            Rectangle wa = Screen.FromControl(this).WorkingArea;
+            int dl = Math.Max(0, Left - wa.Left);
+            int dr = Math.Max(0, wa.Right - Right);
+            int dt = Math.Max(0, Top - wa.Top);
+            int db = Math.Max(0, wa.Bottom - Bottom);
+            int min = Math.Min(Math.Min(dl, dr), Math.Min(dt, db));
+            if (min > DockTolerance) return 0;
+            if (min == dl) return 1;
+            if (min == dr) return 2;
+            if (min == dt) return 3;
+            return 4;
+        }
+
+        private Point VisibleLocation()
+        {
+            Rectangle wa = Screen.FromControl(this).WorkingArea;
+            if (dockedEdge == 1) return new Point(wa.Left, Top);
+            if (dockedEdge == 2) return new Point(wa.Right - Width, Top);
+            if (dockedEdge == 3) return new Point(Left, wa.Top);
+            if (dockedEdge == 4) return new Point(Left, wa.Bottom - Height);
+            return Location;
+        }
+
+        private Point HiddenLocation()
+        {
+            Rectangle wa = Screen.FromControl(this).WorkingArea;
+            if (dockedEdge == 1) return new Point(wa.Left - Width + EdgeStrip, Top);
+            if (dockedEdge == 2) return new Point(wa.Right - EdgeStrip, Top);
+            if (dockedEdge == 3) return new Point(Left, wa.Top - Height + EdgeStrip);
+            if (dockedEdge == 4) return new Point(Left, wa.Bottom - EdgeStrip);
+            return Location;
+        }
+
+        private void TickEdge()
+        {
+            if (!cfg.EdgeHide || dockedEdge == 0) return;
+            if (menu.Visible || refreshingPaused || editingField != 0 || resizing)
+            {
+                lastInside = DateTime.UtcNow;
+                return;
+            }
+            if (slideAnimating) return;
+
+            bool inside = Bounds.Contains(Cursor.Position);
+            if (inside)
+            {
+                lastInside = DateTime.UtcNow;
+                edgeArmed = true;
+                if (edgeHidden) ShowEdge();
+            }
+            else if (edgeArmed && !edgeHidden)
+            {
+                if ((DateTime.UtcNow - lastInside).TotalMilliseconds >= HideDelay)
+                    HideEdge();
+            }
+        }
+
+        private void StartSlide(bool hide)
+        {
+            if (dockedEdge == 0) return;
+            if (hide && !cfg.EdgeHide) return;
+            Point target = hide ? HiddenLocation() : VisibleLocation();
+            if (Location == target)
+            {
+                slideAnimating = false;
+                slideTimer.Stop();
+                slideOutTarget = hide;
+                edgeHidden = hide;
+                hintAlpha = hide ? 1f : 0f;
+                if (!hide) lastInside = DateTime.UtcNow;
+                Invalidate();
+                return;
+            }
+            slideFrom = Location;
+            slideTo = target;
+            slideOutTarget = hide;
+            slideAnimating = true;
+            slideStartTick = Environment.TickCount;
+            hintFrom = hintAlpha;
+            hintTo = hide ? 1f : 0f;
+            if (!hide)
+            {
+                edgeHidden = false;
+                lastInside = DateTime.UtcNow;
+            }
+            slideTimer.Start();
+        }
+
+        private void ShowEdge()
+        {
+            StartSlide(false);
+        }
+
+        private void HideEdge()
+        {
+            StartSlide(true);
+        }
+
+        private void TickSlide()
+        {
+            if (!slideAnimating)
+            {
+                slideTimer.Stop();
+                return;
+            }
+            int elapsed = Environment.TickCount - slideStartTick;
+            float t = (float)elapsed / SlideDuration;
+            if (t >= 1f)
+            {
+                Location = slideTo;
+                slideAnimating = false;
+                slideTimer.Stop();
+                edgeHidden = slideOutTarget;
+                hintAlpha = hintTo;
+                if (!edgeHidden) lastInside = DateTime.UtcNow;
+                Invalidate();
+                return;
+            }
+            float ease = 1f - (1f - t) * (1f - t) * (1f - t);
+            int x = slideFrom.X + (int)Math.Round((slideTo.X - slideFrom.X) * ease);
+            int y = slideFrom.Y + (int)Math.Round((slideTo.Y - slideFrom.Y) * ease);
+            Location = new Point(x, y);
+            hintAlpha = hintFrom + (hintTo - hintFrom) * ease;
+            Invalidate();
+        }
+
+        private void ApplyEdgeHideSetting()
+        {
+            if (!cfg.EdgeHide)
+            {
+                slideTimer.Stop();
+                slideAnimating = false;
+                slideOutTarget = false;
+                if (dockedEdge != 0)
+                {
+                    Location = VisibleLocation();
+                    edgeHidden = false;
+                }
+                hintAlpha = 0f;
+                edgeTimer.Stop();
+                Invalidate();
+                return;
+            }
+
+            dockedEdge = DockEdge();
+            edgeHidden = false;
+            if (dockedEdge != 0)
+            {
+                Location = VisibleLocation();
+                edgeArmed = true;
+                lastInside = DateTime.UtcNow;
+                edgeTimer.Start();
+            }
+            Invalidate();
+        }
+
+        private void EnsureEdgeVisible()
+        {
+            if (dockedEdge == 0) return;
+            if (!edgeHidden && !(slideAnimating && slideOutTarget)) return;
+            slideTimer.Stop();
+            slideAnimating = false;
+            slideOutTarget = false;
+            edgeHidden = false;
+            hintAlpha = 0f;
+            Location = VisibleLocation();
+            lastInside = DateTime.UtcNow;
+            Invalidate();
+        }
+
+        private void ApplyRoundedRegion()
+        {
+            if (Width <= 0 || Height <= 0) return;
+            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height), 12))
+            {
+                Region old = Region;
+                Region = new Region(p);
+                if (old != null) old.Dispose();
+            }
+        }
+
+        private bool HasOpenCodeEdgeUsage()
+        {
+            return cfg.ShowOpenCode && row5h.Configured &&
+                   row5h.Error.Length == 0 && row5h.Remaining >= 0;
+        }
+
+        private bool HasDeepSeekEdgeUsage()
+        {
+            return cfg.ShowDeepSeek && lastDeepSeekBalanceKnown;
+        }
+
+        private int EdgeDisplayPercent()
+        {
+            if (HasOpenCodeEdgeUsage())
+                return row5h.RateLimited ? 0 : Math.Max(0, Math.Min(100, row5h.Remaining));
+            if (HasDeepSeekEdgeUsage())
+            {
+                float remaining;
+                if (cfg.DeepSeekHasTotal && cfg.DeepSeekTotal > 0m)
+                    remaining = (float)(lastDeepSeekBalance * 100m / cfg.DeepSeekTotal);
+                else
+                    remaining = lastDeepSeekBalance > 0m ? 100f : 0f;
+                return Math.Max(0, Math.Min(100, (int)Math.Round(remaining)));
+            }
+            return -1;
+        }
+
+        private Color EdgeDisplayColor()
+        {
+            if (HasOpenCodeEdgeUsage())
+                return row5h.RateLimited ? Palette.Red : Ui.LevelColor(row5h.Remaining);
+            if (HasDeepSeekEdgeUsage()) return Palette.Blue;
+            return Palette.Sub;
+        }
+
+        private void PaintEdgeHint(Graphics g)
+        {
+            if (!cfg.EdgeHide || dockedEdge == 0 || hintAlpha <= 0.01f) return;
+            int a = (int)Math.Round(255f * Math.Max(0f, Math.Min(1f, hintAlpha)));
+            if (a <= 0) return;
+
+            int pct = EdgeDisplayPercent();
+            int len = 56;
+            int thick = 4;
+            int x = 0;
+            int y = 0;
+            int w = 0;
+            int h = 0;
+            bool vertical = dockedEdge == 1 || dockedEdge == 2;
+            if (dockedEdge == 2)
+            {
+                len = Math.Max(8, Height - 24);
+                x = 3;
+                y = (Height - len) / 2;
+                w = thick;
+                h = len;
+            }
+            else if (dockedEdge == 1)
+            {
+                len = Math.Max(8, Height - 24);
+                x = Width - 7;
+                y = (Height - len) / 2;
+                w = thick;
+                h = len;
+            }
+            else if (dockedEdge == 4)
+            {
+                len = Math.Max(8, Width - 24);
+                x = (Width - len) / 2;
+                y = 3;
+                w = len;
+                h = thick;
+            }
+            else
+            {
+                len = Math.Max(8, Width - 24);
+                x = (Width - len) / 2;
+                y = Height - 7;
+                w = len;
+                h = thick;
+            }
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+            if (x + w > Width) x = Width - w;
+            if (y + h > Height) y = Height - h;
+
+            Rectangle track = new Rectangle(x, y, w, h);
+            using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
+            using (GraphicsPath tp = Ui.Rounded(track, 2))
+                g.FillPath(tb, tp);
+
+            if (pct <= 0) return;
+            int fillLen = (int)Math.Round(len * pct / 100f);
+            if (fillLen < thick) fillLen = thick;
+            if (fillLen > len) fillLen = len;
+            Rectangle fill;
+            if (vertical)
+                fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
+            else
+                fill = new Rectangle(track.X, y, fillLen, thick);
+
+            using (SolidBrush fb = new SolidBrush(Color.FromArgb(a, EdgeDisplayColor())))
+            using (GraphicsPath fp = Ui.Rounded(fill, 2))
+                g.FillPath(fb, fp);
         }
 
         // ---------- 等式内联编辑 ----------
@@ -1196,6 +1540,11 @@ namespace QuotaFloat
         private void DragWindow(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left) return;
+            if (edgeHidden || (slideAnimating && slideOutTarget))
+            {
+                ShowEdge();
+                return;
+            }
             if (editingField != 0)
             {
                 EndEdit(true);
@@ -1284,6 +1633,7 @@ namespace QuotaFloat
             resizing = false;
             Capture = false;
             Cursor = Cursors.Default;
+            resizeEdge = 0;
             cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
             cfg.X = Left;
             cfg.Y = Top;
@@ -1305,10 +1655,33 @@ namespace QuotaFloat
         {
             if (m.Msg == WM_EXITSIZEMOVE)
             {
+                int edge = DockEdge();
+                if (cfg.EdgeHide && edge != 0)
+                {
+                    dockedEdge = edge;
+                    Location = VisibleLocation();
+                    slideAnimating = false;
+                    slideOutTarget = false;
+                    slideTimer.Stop();
+                    edgeHidden = false;
+                    edgeArmed = true;
+                    lastInside = DateTime.UtcNow;
+                    edgeTimer.Start();
+                }
+                else
+                {
+                    dockedEdge = 0;
+                    edgeHidden = false;
+                    slideAnimating = false;
+                    slideOutTarget = false;
+                    slideTimer.Stop();
+                    edgeTimer.Stop();
+                }
                 cfg.X = Left;
                 cfg.Y = Top;
                 cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
                 cfg.Save();
+                Invalidate();
             }
             if (m.Msg == 0x001A || m.Msg == 0x031A)
             {
@@ -1326,12 +1699,7 @@ namespace QuotaFloat
             base.OnResize(e);
             if (Width <= 0 || Height <= 0) return;
             LayoutContent();
-            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height), 12))
-            {
-                Region old = Region;
-                Region = new Region(p);
-                if (old != null) old.Dispose();
-            }
+            ApplyRoundedRegion();
             Invalidate();
         }
 
@@ -1343,6 +1711,7 @@ namespace QuotaFloat
             using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width - 1, Height - 1), 12))
             using (Pen pen = new Pen(Palette.WindowBorder))
                 g.DrawPath(pen, p);
+            PaintEdgeHint(g);
         }
 
         protected override void OnLoad(EventArgs e)
@@ -1374,6 +1743,11 @@ namespace QuotaFloat
             barTimer.Start();
             if (demoMode) ApplyDemo();
             else StartFetch();
+            dockedEdge = cfg.EdgeHide ? DockEdge() : 0;
+            if (dockedEdge != 0) Location = VisibleLocation();
+            edgeArmed = false;
+            lastInside = DateTime.UtcNow;
+            edgeTimer.Start();
             foreach (string arg in Environment.GetCommandLineArgs())
             {
                 if (string.Equals(arg, "--settings", StringComparison.OrdinalIgnoreCase))
@@ -1387,18 +1761,22 @@ namespace QuotaFloat
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (editingField != 0) EndEdit(true);
-            cfg.X = Left;
-            cfg.Y = Top;
+            Point save = dockedEdge != 0 ? VisibleLocation() : Location;
+            cfg.X = save.X;
+            cfg.Y = save.Y;
             cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
             cfg.TopMost = TopMost;
             cfg.Save();
             uiTimer.Stop();
             barTimer.Stop();
+            edgeTimer.Stop();
+            slideTimer.Stop();
             base.OnFormClosing(e);
         }
 
         private void OpenSettings()
         {
+            EnsureEdgeVisible();
             string oldKey = cfg.DeepSeekKey;
             refreshingPaused = true;
             try
@@ -1513,6 +1891,7 @@ namespace QuotaFloat
             ApplyRow(row5h, go, go.Rolling);
             ApplyRow(rowWeek, go, go.Weekly);
             ApplyRow(rowMonth, go, go.Monthly);
+            if (edgeHidden || hintAlpha > 0f) Invalidate();
         }
 
         private static string CurrencySymbol(string currency)
