@@ -359,15 +359,17 @@ namespace QuotaFloat
             if (x + w > Width) x = Width - w;
             if (y + h > Height) y = Height - h;
 
+            int segments = len >= 520 ? 10 : (len >= 200 ? 5 : 4);
+            double step = 100.0 / segments;
             int gap = 2;
-            int usable = len - gap * 3;
-            if (usable < 4)
+            int usable = len - gap * (segments - 1);
+            if (usable < segments)
             {
                 gap = 0;
                 usable = len;
             }
-            int segLen = Math.Max(1, usable / 4);
-            int used = segLen * 4 + gap * 3;
+            int segLen = Math.Max(1, usable / segments);
+            int used = segLen * segments + gap * (segments - 1);
             int origin = (vertical ? y : x) + (len - used) / 2;
             int bottom = origin + used;
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
@@ -375,7 +377,7 @@ namespace QuotaFloat
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
             {
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < segments; i++)
                 {
                     Rectangle track;
                     if (vertical)
@@ -392,7 +394,7 @@ namespace QuotaFloat
                     using (GraphicsPath tp = Ui.Rounded(track, 2))
                         g.FillPath(tb, tp);
 
-                    double fraction = Math.Max(0.0, Math.Min(1.0, (pct - i * 25.0) / 25.0));
+                    double fraction = Math.Max(0.0, Math.Min(1.0, (pct - i * step) / step));
                     if (fraction <= 0.0) continue;
                     int fillLen = (int)Math.Round(segLen * fraction);
                     if (fillLen < 1) fillLen = 1;
