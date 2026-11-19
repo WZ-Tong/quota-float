@@ -376,7 +376,7 @@ namespace QuotaFloat
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(85, Palette.Sub), 2f))
+            using (Pen subTick = new Pen(Color.FromArgb(190, Palette.Bg), 2f))
             {
                 for (int i = 0; i < segments; i++)
                 {
