@@ -1,7 +1,9 @@
 ﻿#if DEBUG
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.Windows.Forms;
 
 namespace QuotaFloat
 {
@@ -14,6 +16,14 @@ namespace QuotaFloat
                 Bounds.Left, Bounds.Top, Bounds.Width, Bounds.Height,
                 dockedEdge, edgeHidden ? "True" : "False",
                 hintAlpha, TopMost ? "True" : "False", Strings.Code);
+        }
+
+        internal string DebugMenu()
+        {
+            List<string> items = new List<string>();
+            foreach (ToolStripItem item in menu.Items)
+                items.Add(item.Text);
+            return string.Join("|", items.ToArray());
         }
 
         internal string DebugEquation()

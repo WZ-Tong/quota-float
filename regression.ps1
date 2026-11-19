@@ -24,6 +24,8 @@ try {
     Start-Sleep -Milliseconds 1500
     $proc.StandardInput.WriteLine("status")
     Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("menu")
+    Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("dock right")
     Start-Sleep -Milliseconds 300
     $proc.StandardInput.WriteLine("status")
@@ -40,9 +42,13 @@ try {
     Start-Sleep -Milliseconds 300
     $proc.StandardInput.WriteLine("status")
     Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("menu")
+    Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("lang zh-CN")
     Start-Sleep -Milliseconds 300
     $proc.StandardInput.WriteLine("status")
+    Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("menu")
     Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("quit")
 
@@ -54,6 +60,7 @@ try {
     $out = $proc.StandardOutput.ReadToEnd()
     $err = $proc.StandardError.ReadToEnd()
     $lines = @($out -split "`r?`n" | Where-Object { $_ -like "status *" })
+    $menus = @($out -split "`r?`n" | Where-Object { $_ -like "menu *" })
 
     if ($lines.Count -lt 6) {
         Write-Host $out
@@ -80,6 +87,22 @@ try {
         Write-Host $out
         throw "Chinese switch failed: $($lines[5])"
     }
+    if ($menus.Count -lt 3) {
+        Write-Host $out
+        throw "Expected 3 menu snapshots, got $($menus.Count)."
+    }
+    if ($menus[0] -notmatch "English") {
+        Write-Host $out
+        throw "Chinese menu lacks English switch: $($menus[0])"
+    }
+    if ($menus[1] -match "English") {
+        Write-Host $out
+        throw "English menu still has English top-level item: $($menus[1])"
+    }
+    if ($menus[2] -notmatch "English") {
+        Write-Host $out
+        throw "Chinese menu did not restore English switch: $($menus[2])"
+    }
 
     Write-Host "PASS"
     Write-Host $lines[0]
@@ -88,6 +111,9 @@ try {
     Write-Host $lines[3]
     Write-Host $lines[4]
     Write-Host $lines[5]
+    Write-Host $menus[0]
+    Write-Host $menus[1]
+    Write-Host $menus[2]
     exit 0
 }
 finally {

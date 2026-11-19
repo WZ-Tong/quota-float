@@ -73,9 +73,8 @@ namespace QuotaFloat
         public static string EdgeSnapTip { get { return T("拖到屏幕边缘时吸附，鼠标移出后自动滑出", "Snap at a screen edge and slide out when the mouse leaves"); } }
         public static string AutoStart { get { return T("开机自启动", "Start with Windows"); } }
         public static string AutoStartTip { get { return T("当前用户登录时自动启动", "Start automatically when the current user signs in"); } }
-        public static string Language { get { return T("语言", "Language"); } }
-        public static string English { get { return "English"; } }
-        public static string Chinese { get { return "简体中文"; } }
+        public static string LanguageSwitch { get { return IsZh ? "English" : "中文"; } }
+        public static string OtherLanguageCode { get { return IsZh ? En : ZhCn; } }
         public static string SettingsEllipsis { get { return T("设置…", "Settings..."); } }
         public static string Exit { get { return T("退出", "Exit"); } }
         public static string Settings { get { return T("设置", "Settings"); } }
