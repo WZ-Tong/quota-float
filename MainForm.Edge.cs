@@ -359,9 +359,9 @@ namespace QuotaFloat
             if (x + w > Width) x = Width - w;
             if (y + h > Height) y = Height - h;
 
-            int segments = len >= 520 ? 10 : (len >= 200 ? 5 : 4);
+            int segments = len >= 400 ? 10 : (len >= 200 ? 5 : 4);
             double step = 100.0 / segments;
-            int gap = 2;
+            int gap = segments == 4 ? 2 : 4;
             int usable = len - gap * (segments - 1);
             if (usable < segments)
             {
