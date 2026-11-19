@@ -372,6 +372,7 @@ namespace QuotaFloat
             int used = segLen * segments + gap * (segments - 1);
             int origin = (vertical ? y : x) + (len - used) / 2;
             int bottom = origin + used;
+            int subDivisions = segments <= 5 ? 4 : 2;
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
@@ -412,17 +413,22 @@ namespace QuotaFloat
                             g.FillPath(fb, fp);
                     }
 
-                    if (segLen >= 6)
+                    if (segLen >= 8)
                     {
-                        if (vertical)
+                        for (int j = 1; j < subDivisions; j++)
                         {
-                            int mid = track.Y + track.Height / 2;
-                            g.DrawLine(subTick, x, mid, x + thick - 1, mid);
-                        }
-                        else
-                        {
-                            int mid = track.X + track.Width / 2;
-                            g.DrawLine(subTick, mid, y, mid, y + thick - 1);
+                            if (vertical)
+                            {
+                                int pos = track.Bottom -
+                                    (int)Math.Round(track.Height * (double)j / subDivisions);
+                                g.DrawLine(subTick, x + 1, pos, x + thick - 2, pos);
+                            }
+                            else
+                            {
+                                int pos = track.X +
+                                    (int)Math.Round(track.Width * (double)j / subDivisions);
+                                g.DrawLine(subTick, pos, y + 1, pos, y + thick - 2);
+                            }
                         }
                     }
                 }
