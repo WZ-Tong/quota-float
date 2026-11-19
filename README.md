@@ -6,7 +6,7 @@
 
 ## 下载
 
-- [最新版本](https://github.com/WZ-Tong/quota-float/releases/latest)（`QuotaFloat.exe`）
+- [最新版本](https://github.com/WZ-Tong/quota-float/releases/latest)（正式版 `QuotaFloat.exe`，调试版 `QuotaFloat.debug.exe`）
 
 ## 功能
 
@@ -72,6 +72,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 - 编码统一为 UTF-8：C# 源码为 UTF-8 BOM，并通过 `-codepage:65001 -utf8output` 编译；`build.ps1` 为 UTF-8 BOM；配置文件和网络读取均使用 UTF-8。
 
 仓库内含已编译的 `QuotaFloat.exe`，Releases 中也提供同样的二进制。
+
+每次 GitHub Release 均同时提供两种构建，来源为同一提交：`QuotaFloat.exe` 为正式版，`QuotaFloat.debug.exe` 为控制台调试版，并附带 `QuotaFloat.debug.pdb` 符号文件。
 
 ## 调试
 
