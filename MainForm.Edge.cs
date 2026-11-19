@@ -364,19 +364,33 @@ namespace QuotaFloat
             using (GraphicsPath tp = Ui.Rounded(track, 2))
                 g.FillPath(tb, tp);
 
-            if (pct <= 0) return;
-            int fillLen = (int)Math.Round(len * pct / 100f);
-            if (fillLen < thick) fillLen = thick;
-            if (fillLen > len) fillLen = len;
-            Rectangle fill;
-            if (vertical)
-                fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
-            else
-                fill = new Rectangle(track.X, y, fillLen, thick);
+            if (pct > 0)
+            {
+                int fillLen = (int)Math.Round(len * pct / 100f);
+                if (fillLen < thick) fillLen = thick;
+                if (fillLen > len) fillLen = len;
+                Rectangle fill;
+                if (vertical)
+                    fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
+                else
+                    fill = new Rectangle(track.X, y, fillLen, thick);
 
-            using (SolidBrush fb = new SolidBrush(Color.FromArgb(a, EdgeDisplayColor())))
-            using (GraphicsPath fp = Ui.Rounded(fill, 2))
-                g.FillPath(fb, fp);
+                using (SolidBrush fb = new SolidBrush(Color.FromArgb(a, EdgeDisplayColor())))
+                using (GraphicsPath fp = Ui.Rounded(fill, 2))
+                    g.FillPath(fb, fp);
+            }
+
+            using (Pen tick = new Pen(Color.FromArgb(110, Palette.Sub), 1f))
+            {
+                for (int i = 1; i < 4; i++)
+                {
+                    int pos = (int)Math.Round(len * i / 4.0);
+                    if (vertical)
+                        g.DrawLine(tick, x, track.Y + pos, x + thick - 1, track.Y + pos);
+                    else
+                        g.DrawLine(tick, track.X + pos, y, track.X + pos, y + thick - 1);
+                }
+            }
         }
     }
 }
