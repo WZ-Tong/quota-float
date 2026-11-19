@@ -11,7 +11,7 @@ try {
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $exe
-    $psi.Arguments = "--demo --dark"
+    $psi.Arguments = "--demo --dark --narrow"
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
     $psi.RedirectStandardInput = $true

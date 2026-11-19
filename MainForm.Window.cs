@@ -83,8 +83,8 @@ namespace QuotaFloat
                 int dx = Cursor.Position.X - resizeStartX;
                 Rectangle b = resizeStartBounds;
                 int frame = Width - ClientSize.Width;
-                int minOuter = 360 + frame;
-                int maxOuter = 720 + frame;
+                int minOuter = AppConfig.MinWindowWidth + frame;
+                int maxOuter = AppConfig.MaxWindowWidth + frame;
                 if (resizeEdge < 0)
                 {
                     int newLeft = b.Left + dx;
@@ -115,7 +115,7 @@ namespace QuotaFloat
             Capture = false;
             Cursor = Cursors.Default;
             resizeEdge = 0;
-            cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+            cfg.WindowWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, ClientSize.Width));
             cfg.X = Left;
             cfg.Y = Top;
             cfg.Save();
@@ -162,7 +162,7 @@ namespace QuotaFloat
                 }
                 cfg.X = Left;
                 cfg.Y = Top;
-                cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+                cfg.WindowWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, ClientSize.Width));
                 SaveDockState();
                 cfg.Save();
                 Invalidate();
@@ -275,7 +275,7 @@ namespace QuotaFloat
             Point save = dockedEdge != 0 ? VisibleLocation() : Location;
             cfg.X = save.X;
             cfg.Y = save.Y;
-            cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+            cfg.WindowWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, ClientSize.Width));
             cfg.TopMost = TopMost;
             cfg.Language = Strings.Code;
             SaveDockState();

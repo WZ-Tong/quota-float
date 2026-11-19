@@ -17,6 +17,9 @@ namespace QuotaFloat
 {
     internal sealed class AppConfig
     {
+        public const int MinWindowWidth = 320;
+        public const int MaxWindowWidth = 720;
+
         public string DeepSeekKey = "";
         public string OpenCodeKey = "";
         public int WindowWidth = 380;
@@ -63,8 +66,8 @@ namespace QuotaFloat
                 c.DeepSeekKey = Unprotect(GetStr(d, "deepseekKey"));
                 c.OpenCodeKey = Unprotect(GetStr(d, "opencodeKey"));
                 c.WindowWidth = GetInt(d, "windowWidth", 380);
-                if (c.WindowWidth < 360) c.WindowWidth = 360;
-                if (c.WindowWidth > 720) c.WindowWidth = 720;
+                if (c.WindowWidth < MinWindowWidth) c.WindowWidth = MinWindowWidth;
+                if (c.WindowWidth > MaxWindowWidth) c.WindowWidth = MaxWindowWidth;
                 c.WidthLocked = GetBool(d, "widthLocked", false);
                 c.EdgeHide = GetBool(d, "edgeHide", true);
                 c.EdgeDock = GetInt(d, "edgeDock", 0);

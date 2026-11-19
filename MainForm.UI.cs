@@ -167,6 +167,7 @@ namespace QuotaFloat
                 dsBar.Percent = lastDeepSeekBalance > 0m ? 100f : 0f;
             }
             dsBar.Invalidate();
+            LayoutEquation();
         }
 
         private static bool TryParseDecimal(string s, out decimal v)

@@ -46,6 +46,8 @@ namespace QuotaFloat
         private readonly Panel equationPanel;
         private readonly Label spentLabel;
         private readonly Label totalLabel;
+        private readonly Label plusLabel;
+        private readonly Label equalsLabel;
         private readonly TextBox inlineEditor;
         private readonly MiniBar dsBar;
         private readonly MiniBar refreshBar;
@@ -95,7 +97,7 @@ namespace QuotaFloat
         public MainForm()
         {
             demoMode = HasArg("--demo");
-            int demoWidth = HasArg("--wide") ? 700 : 380;
+            int demoWidth = HasArg("--wide") ? 700 : (HasArg("--narrow") ? AppConfig.MinWindowWidth : 380);
             cfg = demoMode ? new AppConfig { WindowWidth = demoWidth, NoSave = true } : AppConfig.Load();
             if (demoMode)
             {
@@ -113,7 +115,7 @@ namespace QuotaFloat
 
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(96F, 96F);
-            int startWidth = Math.Max(360, Math.Min(720, cfg.WindowWidth));
+            int startWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, cfg.WindowWidth));
             ClientSize = new Size(startWidth, 236);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -144,6 +146,7 @@ namespace QuotaFloat
             deepSeekBalanceOnly = NewLabel("—", 14, 26, dsCard.Width - 28, 40, 14F, FontStyle.Bold, Palette.Text);
             deepSeekBalanceOnly.BackColor = Palette.Card;
             deepSeekBalanceOnly.TextAlign = ContentAlignment.MiddleLeft;
+            deepSeekBalanceOnly.AutoEllipsis = true;
             deepSeekBalanceOnly.Visible = false;
             dsCard.Controls.Add(deepSeekBalanceOnly);
 
@@ -155,18 +158,19 @@ namespace QuotaFloat
             deepSeekBalance = NewLabel("—", 14, 0, 100, 24, 12F, FontStyle.Bold, Palette.Text);
             deepSeekBalance.BackColor = Palette.Card;
             deepSeekBalance.TextAlign = ContentAlignment.MiddleCenter;
+            deepSeekBalance.AutoEllipsis = true;
             equationPanel.Controls.Add(deepSeekBalance);
 
-            Label plus = NewLabel("+", 116, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
-            plus.TextAlign = ContentAlignment.MiddleCenter;
-            equationPanel.Controls.Add(plus);
+            plusLabel = NewLabel("+", 116, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
+            plusLabel.TextAlign = ContentAlignment.MiddleCenter;
+            equationPanel.Controls.Add(plusLabel);
 
             spentLabel = NewValueLabel(132, 0, 90);
             equationPanel.Controls.Add(spentLabel);
 
-            Label equals = NewLabel("=", 226, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
-            equals.TextAlign = ContentAlignment.MiddleCenter;
-            equationPanel.Controls.Add(equals);
+            equalsLabel = NewLabel("=", 226, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
+            equalsLabel.TextAlign = ContentAlignment.MiddleCenter;
+            equationPanel.Controls.Add(equalsLabel);
 
             totalLabel = NewValueLabel(244, 0, 84);
             equationPanel.Controls.Add(totalLabel);
@@ -433,6 +437,7 @@ namespace QuotaFloat
             l.BackColor = Palette.Card;
             l.TextAlign = ContentAlignment.MiddleCenter;
             l.Cursor = Cursors.IBeam;
+            l.AutoEllipsis = true;
             return l;
         }
 
@@ -456,6 +461,70 @@ namespace QuotaFloat
                 rowWeek.Width = rowWidth;
                 rowMonth.Width = rowWidth;
             }
+            LayoutEquation();
+        }
+
+        private static int MeasureEquationWidth(Label label)
+        {
+            string text = string.IsNullOrEmpty(label.Text) ? "0" : label.Text;
+            Size size = TextRenderer.MeasureText(text, label.Font,
+                new Size(int.MaxValue, label.Height),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return size.Width + 8;
+        }
+
+        private static void PlaceEquation(Label label, int x, int width)
+        {
+            if (width < 8) width = 8;
+            label.Bounds = new Rectangle(x, 0, width, 24);
+        }
+
+        private void LayoutEquation()
+        {
+            if (equationPanel == null || deepSeekBalance == null || spentLabel == null ||
+                totalLabel == null || plusLabel == null || equalsLabel == null) return;
+
+            int available = equationPanel.Width - 28;
+            if (available < 40) return;
+            const int gap = 6;
+            const int symbol = 14;
+
+            int balanceWidth = MeasureEquationWidth(deepSeekBalance);
+            int spentWidth = MeasureEquationWidth(spentLabel);
+            int totalWidth = MeasureEquationWidth(totalLabel);
+            int needed = balanceWidth + spentWidth + totalWidth + symbol * 2 + gap * 4;
+            int left = 14;
+
+            if (needed > available)
+            {
+                int values = Math.Max(30, available - symbol * 2 - gap * 4);
+                int sum = Math.Max(1, balanceWidth + spentWidth + totalWidth);
+                balanceWidth = Math.Max(20, (int)Math.Round((double)values * balanceWidth / sum));
+                spentWidth = Math.Max(20, (int)Math.Round((double)values * spentWidth / sum));
+                totalWidth = Math.Max(20, values - balanceWidth - spentWidth);
+                if (balanceWidth + spentWidth + totalWidth > values)
+                {
+                    int over = balanceWidth + spentWidth + totalWidth - values;
+                    balanceWidth = Math.Max(20, balanceWidth - over);
+                    over = balanceWidth + spentWidth + totalWidth - values;
+                    if (over > 0) spentWidth = Math.Max(20, spentWidth - over);
+                }
+            }
+            else
+            {
+                left += (available - needed) / 2;
+            }
+
+            int x = left;
+            PlaceEquation(deepSeekBalance, x, balanceWidth);
+            x += balanceWidth + gap;
+            PlaceEquation(plusLabel, x, symbol);
+            x += symbol + gap;
+            PlaceEquation(spentLabel, x, spentWidth);
+            x += spentWidth + gap;
+            PlaceEquation(equalsLabel, x, symbol);
+            x += symbol + gap;
+            PlaceEquation(totalLabel, x, totalWidth);
         }
 
         private Rectangle ValueRect(Label l)
