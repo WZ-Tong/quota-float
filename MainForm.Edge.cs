@@ -361,7 +361,7 @@ namespace QuotaFloat
 
             int segments = len >= 400 ? 10 : (len >= 200 ? 5 : 4);
             double step = 100.0 / segments;
-            int gap = segments == 4 ? 2 : 4;
+            int gap = segments == 4 ? 3 : 5;
             int usable = len - gap * (segments - 1);
             if (usable < segments)
             {
@@ -376,7 +376,7 @@ namespace QuotaFloat
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(70, Palette.Sub), 1f))
+            using (Pen subTick = new Pen(Color.FromArgb(85, Palette.Sub), 2f))
             {
                 for (int i = 0; i < segments; i++)
                 {
