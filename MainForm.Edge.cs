@@ -376,6 +376,7 @@ namespace QuotaFloat
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
+            using (Pen subTick = new Pen(Color.FromArgb(70, Palette.Sub), 1f))
             {
                 for (int i = 0; i < segments; i++)
                 {
@@ -395,19 +396,35 @@ namespace QuotaFloat
                         g.FillPath(tb, tp);
 
                     double fraction = Math.Max(0.0, Math.Min(1.0, (pct - i * step) / step));
-                    if (fraction <= 0.0) continue;
-                    int fillLen = (int)Math.Round(segLen * fraction);
-                    if (fillLen < 1) fillLen = 1;
-                    if (fillLen > segLen) fillLen = segLen;
+                    if (fraction > 0.0)
+                    {
+                        int fillLen = (int)Math.Round(segLen * fraction);
+                        if (fillLen < 1) fillLen = 1;
+                        if (fillLen > segLen) fillLen = segLen;
 
-                    Rectangle fill;
-                    if (vertical)
-                        fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
-                    else
-                        fill = new Rectangle(track.X, y, fillLen, thick);
+                        Rectangle fill;
+                        if (vertical)
+                            fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
+                        else
+                            fill = new Rectangle(track.X, y, fillLen, thick);
 
-                    using (GraphicsPath fp = Ui.Rounded(fill, 2))
-                        g.FillPath(fb, fp);
+                        using (GraphicsPath fp = Ui.Rounded(fill, 2))
+                            g.FillPath(fb, fp);
+                    }
+
+                    if (segLen >= 6)
+                    {
+                        if (vertical)
+                        {
+                            int mid = track.Y + track.Height / 2;
+                            g.DrawLine(subTick, x, mid, x + thick - 1, mid);
+                        }
+                        else
+                        {
+                            int mid = track.X + track.Width / 2;
+                            g.DrawLine(subTick, mid, y, mid, y + thick - 1);
+                        }
+                    }
                 }
             }
         }
