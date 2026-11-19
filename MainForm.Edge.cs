@@ -359,9 +359,22 @@ namespace QuotaFloat
             if (x + w > Width) x = Width - w;
             if (y + h > Height) y = Height - h;
 
-            int segments = len >= 400 ? 10 : 5;
+            int segments;
+            int gap;
+            int gridStep;
+            if (vertical)
+            {
+                segments = 4;
+                gap = 3;
+                gridStep = 0;
+            }
+            else
+            {
+                segments = len >= 400 ? 10 : 5;
+                gap = 5;
+                gridStep = segments == 10 ? 5 : 10;
+            }
             double step = 100.0 / segments;
-            int gap = 5;
             int usable = len - gap * (segments - 1);
             if (usable < segments)
             {
@@ -372,13 +385,12 @@ namespace QuotaFloat
             int used = segLen * segments + gap * (segments - 1);
             int origin = (vertical ? y : x) + (len - used) / 2;
             int bottom = origin + used;
-            int gridStep = segments == 10 ? 5 : 10;
-            int subDivisions = (100 / segments) / gridStep;
+            int subDivisions = gridStep > 0 ? (100 / segments) / gridStep : 1;
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(190, Palette.Bg), 3f))
+            using (Pen subTick = new Pen(Color.FromArgb(215, Palette.Bg), 3f))
             {
                 for (int i = 0; i < segments; i++)
                 {
