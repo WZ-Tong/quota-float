@@ -16,6 +16,16 @@ namespace QuotaFloat
                 hintAlpha, TopMost ? "True" : "False", Strings.Code);
         }
 
+        internal string DebugEquation()
+        {
+            return string.Format(CultureInfo.InvariantCulture,
+                "eqpanel={0} balance={1},{2},\"{3}\" spent={4},{5},\"{6}\" total={7},{8},\"{9}\"",
+                equationPanel.Width,
+                deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
+                spentLabel.Left, spentLabel.Width, spentLabel.Text,
+                totalLabel.Left, totalLabel.Width, totalLabel.Text);
+        }
+
         internal void DebugShow()
         {
             if (dockedEdge == 0) return;

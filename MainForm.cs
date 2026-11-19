@@ -176,7 +176,7 @@ namespace QuotaFloat
             equationPanel.Controls.Add(totalLabel);
 
             dsBar = new MiniBar();
-            dsBar.Bounds = new Rectangle(14, 30, equationPanel.Width - 28, 4);
+            dsBar.Bounds = new Rectangle(10, 30, equationPanel.Width - 20, 4);
             dsBar.FillColor = Palette.Blue;
             dsBar.BackColor = Palette.Card;
             equationPanel.Controls.Add(dsBar);
@@ -450,7 +450,11 @@ namespace QuotaFloat
             goCard.Width = w - 24;
             refreshBar.Width = w - 28;
             if (equationPanel != null) equationPanel.Width = dsCard.Width;
-            if (dsBar != null) dsBar.Width = dsCard.Width - 28;
+            if (dsBar != null)
+            {
+                dsBar.Left = 10;
+                dsBar.Width = dsCard.Width - 20;
+            }
             if (deepSeekStatus != null) deepSeekStatus.Width = dsCard.Width - 28;
             if (deepSeekBalanceOnly != null) deepSeekBalanceOnly.Width = dsCard.Width - 28;
             if (deepSeekPeriod != null) deepSeekPeriod.Left = dsCard.Width - 100;
@@ -470,7 +474,7 @@ namespace QuotaFloat
             Size size = TextRenderer.MeasureText(text, label.Font,
                 new Size(int.MaxValue, label.Height),
                 TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-            return size.Width + 8;
+            return size.Width + 12;
         }
 
         private static void PlaceEquation(Label label, int x, int width)
@@ -484,16 +488,16 @@ namespace QuotaFloat
             if (equationPanel == null || deepSeekBalance == null || spentLabel == null ||
                 totalLabel == null || plusLabel == null || equalsLabel == null) return;
 
-            int available = equationPanel.Width - 28;
+            int available = equationPanel.Width - 20;
             if (available < 40) return;
-            const int gap = 6;
+            const int gap = 4;
             const int symbol = 14;
 
             int balanceWidth = MeasureEquationWidth(deepSeekBalance);
             int spentWidth = MeasureEquationWidth(spentLabel);
             int totalWidth = MeasureEquationWidth(totalLabel);
             int needed = balanceWidth + spentWidth + totalWidth + symbol * 2 + gap * 4;
-            int left = 14;
+            int left = 10;
 
             if (needed > available)
             {
