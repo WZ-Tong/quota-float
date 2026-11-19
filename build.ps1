@@ -82,7 +82,6 @@ $common = @(
     "-nologo",
     "-codepage:65001",
     "-utf8output",
-    "-target:winexe",
     "-win32manifest:$manifest",
     "-win32icon:$icon",
     "-out:$outPath",
@@ -95,9 +94,9 @@ $common = @(
 )
 
 if ($Configuration -eq "Debug") {
-    $cscArgs = @("-optimize-", "-debug:full", "-define:DEBUG") + $common + $sources
+    $cscArgs = @("-target:exe", "-optimize-", "-debug:full", "-define:DEBUG") + $common + $sources
 } else {
-    $cscArgs = @("-optimize+", "-debug-") + $common + $sources
+    $cscArgs = @("-target:winexe", "-optimize+", "-debug-") + $common + $sources
 }
 
 Write-Host "Compiler     : $csc"

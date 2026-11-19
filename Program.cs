@@ -24,7 +24,11 @@ namespace QuotaFloat
             catch { }
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+            MainForm form = new MainForm();
+#if DEBUG
+            DebugShell.Start(form);
+#endif
+            Application.Run(form);
         }
     }
 }
