@@ -123,6 +123,8 @@ namespace QuotaFloat
         public int WindowWidth = 380;
         public bool WidthLocked;
         public bool EdgeHide = true;
+        public int EdgeDock;
+        public double EdgeAnchor = 0.5;
         public int ThemeMode;
         public bool EquationEnabled = true;
         public bool ShowDeepSeek = true;
@@ -165,6 +167,11 @@ namespace QuotaFloat
                 if (c.WindowWidth > 720) c.WindowWidth = 720;
                 c.WidthLocked = GetBool(d, "widthLocked", false);
                 c.EdgeHide = GetBool(d, "edgeHide", true);
+                c.EdgeDock = GetInt(d, "edgeDock", 0);
+                if (c.EdgeDock < 0 || c.EdgeDock > 4) c.EdgeDock = 0;
+                c.EdgeAnchor = GetDouble(d, "edgeAnchor", 0.5);
+                if (c.EdgeAnchor < 0.0) c.EdgeAnchor = 0.0;
+                if (c.EdgeAnchor > 1.0) c.EdgeAnchor = 1.0;
                 c.ThemeMode = GetInt(d, "themeMode", 0);
                 if (c.ThemeMode < 0 || c.ThemeMode > 2) c.ThemeMode = 0;
                 c.EquationEnabled = GetBool(d, "equationEnabled", true);
@@ -196,6 +203,8 @@ namespace QuotaFloat
                 d["windowWidth"] = WindowWidth;
                 d["widthLocked"] = WidthLocked;
                 d["edgeHide"] = EdgeHide;
+                d["edgeDock"] = EdgeDock;
+                d["edgeAnchor"] = EdgeAnchor;
                 d["themeMode"] = ThemeMode;
                 d["equationEnabled"] = EquationEnabled;
                 d["showDeepSeek"] = ShowDeepSeek;
@@ -257,6 +266,14 @@ namespace QuotaFloat
             object v;
             if (!d.TryGetValue(k, out v) || v == null) return def;
             try { return Convert.ToDecimal(v, CultureInfo.InvariantCulture); }
+            catch { return def; }
+        }
+
+        private static double GetDouble(Dictionary<string, object> d, string k, double def)
+        {
+            object v;
+            if (!d.TryGetValue(k, out v) || v == null) return def;
+            try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); }
             catch { return def; }
         }
 
@@ -472,6 +489,8 @@ namespace QuotaFloat
         private const int EdgeStrip = 10;
         private const int SlideDuration = 180;
         private const int HideDelay = 450;
+        private const int ShowDelay = 200;
+        private const int StartupHideDelay = 1500;
         private const int DockTolerance = 14;
 
         [DllImport("user32.dll")]
@@ -524,6 +543,8 @@ namespace QuotaFloat
         private float hintFrom;
         private float hintTo;
         private DateTime lastInside = DateTime.UtcNow;
+        private DateTime hiddenHoverStart = DateTime.MinValue;
+        private DateTime hideNotBefore = DateTime.MinValue;
         private int editingField;
         private decimal lastDeepSeekBalance;
         private bool lastDeepSeekBalanceKnown;
@@ -748,6 +769,16 @@ namespace QuotaFloat
                 ApplyEdgeHideSetting();
             };
             menu.Items.Add(edgeHideItem);
+            ToolStripMenuItem autoStartItem = new ToolStripMenuItem("开机自启动");
+            autoStartItem.ToolTipText = "当前用户登录时自动启动";
+            autoStartItem.Checked = IsAutoStartEnabled();
+            autoStartItem.Enabled = !demoMode;
+            autoStartItem.Click += delegate
+            {
+                bool enable = !autoStartItem.Checked;
+                if (SetAutoStart(enable)) autoStartItem.Checked = enable;
+            };
+            menu.Items.Add(autoStartItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("设置…", null, delegate { OpenSettings(); });
             menu.Items.Add("退出", null, delegate { Close(); });
@@ -763,9 +794,14 @@ namespace QuotaFloat
                 if (!cfg.EdgeHide || dockedEdge == 0) return;
                 edgeArmed = true;
                 edgeTimer.Start();
-                if (edgeHidden || (slideAnimating && slideOutTarget)) ShowEdge();
+                hideNotBefore = DateTime.MinValue;
+                hiddenHoverStart = edgeHidden ? DateTime.UtcNow : DateTime.MinValue;
             };
-            MouseLeave += delegate { if (!resizing) Cursor = Cursors.Default; };
+            MouseLeave += delegate
+            {
+                if (!resizing) Cursor = Cursors.Default;
+                hiddenHoverStart = DateTime.MinValue;
+            };
             AttachDrag(dsCard);
             AttachDrag(refreshBar);
             AttachDrag(goCard);
@@ -965,27 +1001,87 @@ namespace QuotaFloat
             return Location;
         }
 
+        private Point EdgeLocation(int edge, double anchor, Rectangle wa)
+        {
+            int x = Left;
+            int y = Top;
+            if (edge == 1 || edge == 2)
+            {
+                x = edge == 1 ? wa.Left : wa.Right - Width;
+                y = wa.Top + (int)Math.Round(anchor * wa.Height) - Height / 2;
+            }
+            else
+            {
+                y = edge == 3 ? wa.Top : wa.Bottom - Height;
+                x = wa.Left + (int)Math.Round(anchor * wa.Width) - Width / 2;
+            }
+            if (x < wa.Left) x = wa.Left;
+            if (y < wa.Top) y = wa.Top;
+            if (x + Width > wa.Right) x = wa.Right - Width;
+            if (y + Height > wa.Bottom) y = wa.Bottom - Height;
+            return new Point(x, y);
+        }
+
+        private double EdgeAnchorFor(int edge, Rectangle wa)
+        {
+            double anchor;
+            if (edge == 1 || edge == 2)
+                anchor = (Top + Height / 2.0 - wa.Top) / Math.Max(1.0, wa.Height);
+            else
+                anchor = (Left + Width / 2.0 - wa.Left) / Math.Max(1.0, wa.Width);
+            if (anchor < 0.02) anchor = 0.02;
+            if (anchor > 0.98) anchor = 0.98;
+            return anchor;
+        }
+
+        private void SaveDockState()
+        {
+            if (dockedEdge == 0)
+            {
+                cfg.EdgeDock = 0;
+                return;
+            }
+            Rectangle wa = Screen.FromControl(this).WorkingArea;
+            cfg.EdgeDock = dockedEdge;
+            cfg.EdgeAnchor = EdgeAnchorFor(dockedEdge, wa);
+        }
+
         private void TickEdge()
         {
             if (!cfg.EdgeHide || dockedEdge == 0) return;
             if (menu.Visible || refreshingPaused || editingField != 0 || resizing)
             {
                 lastInside = DateTime.UtcNow;
+                hiddenHoverStart = DateTime.MinValue;
                 return;
             }
             if (slideAnimating) return;
 
             bool inside = Bounds.Contains(Cursor.Position);
+            DateTime now = DateTime.UtcNow;
             if (inside)
             {
-                lastInside = DateTime.UtcNow;
+                lastInside = now;
                 edgeArmed = true;
-                if (edgeHidden) ShowEdge();
+                if (edgeHidden)
+                {
+                    if (hiddenHoverStart == DateTime.MinValue) hiddenHoverStart = now;
+                    if ((now - hiddenHoverStart).TotalMilliseconds >= ShowDelay) ShowEdge();
+                }
+                else
+                {
+                    hiddenHoverStart = DateTime.MinValue;
+                }
             }
-            else if (edgeArmed && !edgeHidden)
+            else
             {
-                if ((DateTime.UtcNow - lastInside).TotalMilliseconds >= HideDelay)
-                    HideEdge();
+                hiddenHoverStart = DateTime.MinValue;
+                if (edgeArmed && !edgeHidden)
+                {
+                    if (now >= hideNotBefore &&
+                        (now - lastInside).TotalMilliseconds >= HideDelay)
+                        HideEdge();
+                }
             }
         }
 
@@ -993,6 +1089,7 @@ namespace QuotaFloat
         {
             if (dockedEdge == 0) return;
             if (hide && !cfg.EdgeHide) return;
+            hiddenHoverStart = DateTime.MinValue;
             Point target = hide ? HiddenLocation() : VisibleLocation();
             if (Location == target)
             {
@@ -1001,7 +1098,11 @@ namespace QuotaFloat
                 slideOutTarget = hide;
                 edgeHidden = hide;
                 hintAlpha = hide ? 1f : 0f;
-                if (!hide) lastInside = DateTime.UtcNow;
+                if (!hide)
+                {
+                    hideNotBefore = DateTime.MinValue;
+                    lastInside = DateTime.UtcNow;
+                }
                 Invalidate();
                 return;
             }
@@ -1015,6 +1116,7 @@ namespace QuotaFloat
             if (!hide)
             {
                 edgeHidden = false;
+                hideNotBefore = DateTime.MinValue;
                 lastInside = DateTime.UtcNow;
             }
             slideTimer.Start();
@@ -1070,6 +1172,8 @@ namespace QuotaFloat
                     Location = VisibleLocation();
                     edgeHidden = false;
                 }
+                hiddenHoverStart = DateTime.MinValue;
+                hideNotBefore = DateTime.MinValue;
                 hintAlpha = 0f;
                 edgeTimer.Stop();
                 Invalidate();
@@ -1078,6 +1182,8 @@ namespace QuotaFloat
 
             dockedEdge = DockEdge();
             edgeHidden = false;
+            hiddenHoverStart = DateTime.MinValue;
+            hideNotBefore = DateTime.MinValue;
             if (dockedEdge != 0)
             {
                 Location = VisibleLocation();
@@ -1096,6 +1202,8 @@ namespace QuotaFloat
             slideAnimating = false;
             slideOutTarget = false;
             edgeHidden = false;
+            hiddenHoverStart = DateTime.MinValue;
+            hideNotBefore = DateTime.MinValue;
             hintAlpha = 0f;
             Location = VisibleLocation();
             lastInside = DateTime.UtcNow;
@@ -1454,6 +1562,43 @@ namespace QuotaFloat
             }
         }
 
+        private static bool IsAutoStartEnabled()
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", false))
+                {
+                    return k != null && k.GetValue("QuotaFloat") != null;
+                }
+            }
+            catch { return false; }
+        }
+
+        private static bool SetAutoStart(bool enabled)
+        {
+            try
+            {
+                using (RegistryKey k = Registry.CurrentUser.CreateSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run"))
+                {
+                    if (k == null) return false;
+                    if (enabled)
+                        k.SetValue("QuotaFloat", "\"" + Application.ExecutablePath + "\"",
+                            RegistryValueKind.String);
+                    else
+                        k.DeleteValue("QuotaFloat", false);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("无法设置开机自启动：\n" + ex.Message, "QuotaFloat",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+        }
+
         private static bool HasArg(string name)
         {
             foreach (string arg in Environment.GetCommandLineArgs())
@@ -1666,6 +1811,8 @@ namespace QuotaFloat
                     edgeHidden = false;
                     edgeArmed = true;
                     lastInside = DateTime.UtcNow;
+                    hiddenHoverStart = DateTime.MinValue;
+                    hideNotBefore = DateTime.MinValue;
                     edgeTimer.Start();
                 }
                 else
@@ -1680,6 +1827,7 @@ namespace QuotaFloat
                 cfg.X = Left;
                 cfg.Y = Top;
                 cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
+                SaveDockState();
                 cfg.Save();
                 Invalidate();
             }
@@ -1743,10 +1891,37 @@ namespace QuotaFloat
             barTimer.Start();
             if (demoMode) ApplyDemo();
             else StartFetch();
-            dockedEdge = cfg.EdgeHide ? DockEdge() : 0;
-            if (dockedEdge != 0) Location = VisibleLocation();
-            edgeArmed = false;
-            lastInside = DateTime.UtcNow;
+
+            bool startupDocked = false;
+            if (cfg.EdgeHide && cfg.EdgeDock >= 1 && cfg.EdgeDock <= 4)
+            {
+                Rectangle wa = Screen.FromControl(this).WorkingArea;
+                Location = EdgeLocation(cfg.EdgeDock, cfg.EdgeAnchor, wa);
+                dockedEdge = cfg.EdgeDock;
+                startupDocked = true;
+            }
+            else
+            {
+                dockedEdge = cfg.EdgeHide ? DockEdge() : 0;
+                if (dockedEdge != 0)
+                {
+                    Location = VisibleLocation();
+                    startupDocked = true;
+                }
+            }
+
+            DateTime now = DateTime.UtcNow;
+            edgeArmed = startupDocked;
+            lastInside = now;
+            hiddenHoverStart = DateTime.MinValue;
+            hideNotBefore = startupDocked
+                ? now.AddMilliseconds(StartupHideDelay)
+                : DateTime.MinValue;
+            if (startupDocked)
+            {
+                SaveDockState();
+                cfg.Save();
+            }
             edgeTimer.Start();
             foreach (string arg in Environment.GetCommandLineArgs())
             {
@@ -1766,6 +1941,7 @@ namespace QuotaFloat
             cfg.Y = save.Y;
             cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
             cfg.TopMost = TopMost;
+            SaveDockState();
             cfg.Save();
             uiTimer.Stop();
             barTimer.Stop();

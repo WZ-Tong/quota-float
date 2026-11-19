@@ -16,7 +16,9 @@
 - 每 60 秒自动刷新，卡片间细条显示下次刷新进度。
 - 黑/白主题：默认跟随系统，也可右键强制浅色/深色。
 - 无标题栏；不出现在任务栏和 Alt+Tab；左右边缘可直接拖动宽度，支持锁定并持久化。
-- 贴边滑出：拖到屏幕边缘松开后吸附；鼠标移出约 0.45 秒后，窗口用动画滑出屏幕，只在边缘保留 10px 的边；鼠标移入立即滑回，停留期间不自动收起。滑出只改位置，窗口宽高保持原尺寸。贴边时边缘指示条显示剩余比例，与内部进度条一致（100% 为全填充），长度几乎贯穿整条边；轨道使用更深底色标出 100% 范围。OpenCode 按 5 小时剩余量分级填充（绿/黄/红），无 OpenCode 数据时显示 DeepSeek 余额比例（蓝），无数据为空轨道。展开时指示条随窗口一起被拉出并同步淡出，收起时同步淡入。
+- 贴边滑出：拖到屏幕边缘松开后吸附；鼠标移出约 0.45 秒后，窗口用动画滑出屏幕，只在边缘保留 10px 的边；鼠标在边缘停留约 0.2 秒后滑回，停留期间不自动收起。滑出只改位置，窗口宽高保持原尺寸。贴边时边缘指示条显示剩余比例，与内部进度条一致（100% 为全填充），长度几乎贯穿整条边；轨道使用更深底色标出 100% 范围。OpenCode 按 5 小时剩余量分级填充（绿/黄/红），无 OpenCode 数据时显示 DeepSeek 余额比例（蓝），无数据为空轨道。展开时指示条随窗口一起被拉出并同步淡出，收起时同步淡入。
+- 位置持久化：保存绝对坐标、贴边方向和沿边锚点；启动时按当前屏幕恢复，分辨率变化后仍可回到原边。若启动时处于贴边状态，约 1.5 秒后自动滑出；鼠标停留在窗口上则不收起。
+- 开机自启动：右键菜单写入/删除当前用户登录启动项（`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`），无需管理员权限，使用当前 exe 路径。
 - 右键菜单提供设置、主题、等式开关、宽度锁定和退出；三击顶部也可打开设置。
 - 所有配置保存在本机 `%APPDATA%\QuotaFloat\config.json`，API Key 使用 Windows DPAPI（CurrentUser）加密，不上传。
 
@@ -35,6 +37,7 @@
    - 主题 → 跟随系统 / 浅色 / 深色
    - 锁定宽度
    - 贴边吸附：开关贴边与自动滑出行为；关闭后窗口可自由摆放，不吸边
+   - 开机自启动：当前用户登录时自动运行
    - 设置…
    - 退出
 
@@ -50,18 +53,19 @@ DeepSeek 公开 API 只提供账户余额，不提供累计消费。因此“花
 
 ## 构建
 
-Windows 10/11 自带 .NET Framework 4.x，可直接用系统 `csc.exe` 编译，无第三方依赖：
+需要 Windows 10/11 自带的 .NET Framework 4.x，无第三方依赖：
 
-```bat
-"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" ^
-  -nologo -codepage:65001 -target:winexe -optimize+ ^
-  -win32manifest:app.manifest -win32icon:app.ico ^
-  -out:QuotaFloat.exe ^
-  -reference:System.dll -reference:System.Core.dll ^
-  -reference:System.Drawing.dll -reference:System.Windows.Forms.dll ^
-  -reference:System.Web.Extensions.dll -reference:System.Security.dll ^
-  QuotaFloat.cs
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
+
+- 只保留 `build.ps1` 作为唯一构建入口。
+- 默认 Release：`-optimize+ -debug-`，输出 `QuotaFloat.exe`，不生成 PDB，产物更小。
+- Debug：追加 `-Configuration Debug`，输出 `QuotaFloat.debug.exe` 和 `.pdb`，使用 `-optimize- -debug:full -define:DEBUG`，便于调试。
+- 脚本不写死编译器路径：依次检查 `-CompilerPath`、`CSC` 环境变量、PATH 中的 `csc.exe`，再在 `%WINDIR%\Microsoft.NET\Framework64` 和 `Framework` 下查找 v4.x 的 `csc.exe`。
+- 自动编译仓库内所有 `.cs`（排除 `bin`、`obj`），后续拆分源码无需改构建命令。
+- 覆盖 `QuotaFloat.exe` 前请先退出正在运行的实例。
+- 编码统一为 UTF-8：C# 源码为 UTF-8 BOM，并通过 `-codepage:65001 -utf8output` 编译；`build.ps1` 为 UTF-8 BOM；配置文件和网络读取均使用 UTF-8。
 
 仓库内含已编译的 `QuotaFloat.exe`，Releases 中也提供同样的二进制。
 
