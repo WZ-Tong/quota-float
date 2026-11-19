@@ -21,7 +21,7 @@ namespace QuotaFloat
             catch { }
 
             Console.WriteLine("debug-ready");
-            Console.WriteLine("commands: status, show, hide, dock left|right|top|bottom, move X Y, top on|off, quit");
+            Console.WriteLine("commands: status, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
 
             while (true)
             {
@@ -40,7 +40,7 @@ namespace QuotaFloat
                 }
                 if (command == "help")
                 {
-                    Console.WriteLine("commands: status, show, hide, dock left|right|top|bottom, move X Y, top on|off, quit");
+                    Console.WriteLine("commands: status, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
                     continue;
                 }
                 if (command == "status")
@@ -79,6 +79,18 @@ namespace QuotaFloat
                         continue;
                     }
                     Run(form, delegate { form.DebugMove(x, y); });
+                    continue;
+                }
+                if (command == "lang" && parts.Length >= 2)
+                {
+                    string value = parts[1].ToLowerInvariant();
+                    if (value != "en" && value != "zh" && value != "zh-cn")
+                    {
+                        Console.WriteLine("error use lang en|zh");
+                        continue;
+                    }
+                    string code = value == "en" ? Strings.En : Strings.ZhCn;
+                    Run(form, delegate { form.DebugLanguage(code); });
                     continue;
                 }
                 if (command == "top" && parts.Length >= 2)

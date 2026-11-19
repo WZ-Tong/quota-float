@@ -112,10 +112,10 @@ namespace QuotaFloat
 
         private string SuffixText()
         {
-            if (!Configured) return "未配置 Key";
+            if (!Configured) return Strings.NotConfiguredKey;
             if (Error.Length > 0) return Error;
-            if (RateLimited) return "耗尽 · " + Countdown();
-            if (Remaining < 0) return "等待数据";
+            if (RateLimited) return Strings.RateLimited(Countdown());
+            if (Remaining < 0) return Strings.WaitingData;
             return Countdown();
         }
 
@@ -127,7 +127,7 @@ namespace QuotaFloat
 
             int w = ClientSize.Width;
             Color level = Ui.LevelColor(Remaining);
-            string pct = Remaining >= 0 ? "剩余 " + Remaining.ToString(CultureInfo.InvariantCulture) + "%" : "—";
+            string pct = Remaining >= 0 ? Strings.Remaining(Remaining) : "—";
             Color pctColor = Remaining >= 0 ? level : Palette.Sub;
             if (Error.Length > 0 || RateLimited) { pct = "—"; pctColor = Palette.Red; }
 

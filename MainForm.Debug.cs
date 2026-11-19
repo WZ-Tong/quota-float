@@ -10,10 +10,10 @@ namespace QuotaFloat
         internal string DebugStatus()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7}",
+                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7} lang={8}",
                 Bounds.Left, Bounds.Top, Bounds.Width, Bounds.Height,
                 dockedEdge, edgeHidden ? "True" : "False",
-                hintAlpha, TopMost ? "True" : "False");
+                hintAlpha, TopMost ? "True" : "False", Strings.Code);
         }
 
         internal void DebugShow()
@@ -44,6 +44,11 @@ namespace QuotaFloat
             hiddenHoverStart = DateTime.MinValue;
             edgeTimer.Start();
             Invalidate();
+        }
+
+        internal void DebugLanguage(string code)
+        {
+            SetLanguage(code);
         }
 
         internal void DebugMove(int x, int y)

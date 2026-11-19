@@ -25,7 +25,7 @@ namespace QuotaFloat
         public SettingsForm(AppConfig config)
         {
             cfg = config;
-            Text = "设置";
+            Text = Strings.Settings;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -39,19 +39,19 @@ namespace QuotaFloat
             AutoScaleDimensions = new SizeF(96F, 96F);
 
             AddLabel("DeepSeek API Key", 16, 14, 210);
-            Label dsHint = AddLabel("当前 " + Ui.MaskKey(cfg.DeepSeekKey), 240, 14, 184);
+            Label dsHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.DeepSeekKey)), 240, 14, 184);
             dsHint.TextAlign = ContentAlignment.MiddleRight;
             dsHint.Font = new Font("Segoe UI", 7.25F);
             dsBox = AddInput(16, 36, 408);
 
             AddLabel("OpenCode API Key", 16, 72, 210);
-            Label goHint = AddLabel("当前 " + Ui.MaskKey(cfg.OpenCodeKey), 240, 72, 184);
+            Label goHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.OpenCodeKey)), 240, 72, 184);
             goHint.TextAlign = ContentAlignment.MiddleRight;
             goHint.Font = new Font("Segoe UI", 7.25F);
             goBox = AddInput(16, 94, 408);
 
             Button save = new Button();
-            save.Text = "保存";
+            save.Text = Strings.Save;
             save.Bounds = new Rectangle(232, 132, 90, 30);
             StyleButton(save, Palette.Blue, Color.White);
             save.Click += delegate
@@ -77,7 +77,7 @@ namespace QuotaFloat
             Controls.Add(save);
 
             Button cancel = new Button();
-            cancel.Text = "取消";
+            cancel.Text = Strings.Cancel;
             cancel.Bounds = new Rectangle(332, 132, 90, 30);
             StyleButton(cancel, Palette.InputBg, Palette.Text);
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };

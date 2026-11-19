@@ -277,6 +277,7 @@ namespace QuotaFloat
             cfg.Y = save.Y;
             cfg.WindowWidth = Math.Max(360, Math.Min(720, ClientSize.Width));
             cfg.TopMost = TopMost;
+            cfg.Language = Strings.Code;
             SaveDockState();
             cfg.Save();
             uiTimer.Stop();
@@ -300,7 +301,7 @@ namespace QuotaFloat
                         if (cfg.DeepSeekKey != oldKey)
                         {
                             lastDeepSeekBalanceKnown = false;
-                            deepSeekStatus.Text = "正在读取…";
+                            deepSeekStatus.Text = Strings.Loading;
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }

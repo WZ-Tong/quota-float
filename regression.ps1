@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $root = $PSScriptRoot
 $build = Join-Path $root "build.ps1"
@@ -36,6 +36,14 @@ try {
     Start-Sleep -Milliseconds 500
     $proc.StandardInput.WriteLine("status")
     Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("lang en")
+    Start-Sleep -Milliseconds 300
+    $proc.StandardInput.WriteLine("status")
+    Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("lang zh-CN")
+    Start-Sleep -Milliseconds 300
+    $proc.StandardInput.WriteLine("status")
+    Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("quit")
 
     if (-not $proc.WaitForExit(5000)) {
@@ -47,10 +55,10 @@ try {
     $err = $proc.StandardError.ReadToEnd()
     $lines = @($out -split "`r?`n" | Where-Object { $_ -like "status *" })
 
-    if ($lines.Count -lt 4) {
+    if ($lines.Count -lt 6) {
         Write-Host $out
         Write-Host $err
-        throw "Expected at least 4 status lines, got $($lines.Count)."
+        throw "Expected at least 6 status lines, got $($lines.Count)."
     }
     if ($lines[1] -notmatch "dock=2") {
         Write-Host $out
@@ -64,12 +72,22 @@ try {
         Write-Host $out
         throw "Show failed: $($lines[3])"
     }
+    if ($lines[4] -notmatch "lang=en") {
+        Write-Host $out
+        throw "English switch failed: $($lines[4])"
+    }
+    if ($lines[5] -notmatch "lang=zh-CN") {
+        Write-Host $out
+        throw "Chinese switch failed: $($lines[5])"
+    }
 
     Write-Host "PASS"
     Write-Host $lines[0]
     Write-Host $lines[1]
     Write-Host $lines[2]
     Write-Host $lines[3]
+    Write-Host $lines[4]
+    Write-Host $lines[5]
     exit 0
 }
 finally {

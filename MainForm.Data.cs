@@ -46,8 +46,8 @@ namespace QuotaFloat
                     {
                         if (t.IsFaulted || t.IsCanceled)
                             ApplyFetch(new FetchResult(
-                                new DeepSeekState { Configured = dsKey.Length > 0, Error = "查询失败" },
-                                new GoState { Configured = goKey.Length > 0, Error = "查询失败" }));
+                                new DeepSeekState { Configured = dsKey.Length > 0, Error = Strings.QueryFailed },
+                                new GoState { Configured = goKey.Length > 0, Error = Strings.QueryFailed }));
                         else
                             ApplyFetch(t.Result);
                     }));
@@ -67,7 +67,7 @@ namespace QuotaFloat
             {
                 if (editingField != 0) EndEdit(false);
                 lastDeepSeekBalanceKnown = false;
-                deepSeekStatus.Text = "未配置 · 三击设置";
+                deepSeekStatus.Text = Strings.NotConfiguredHint;
                 deepSeekStatus.ForeColor = Palette.Sub;
                 UpdateDisplay();
             }
@@ -140,14 +140,14 @@ namespace QuotaFloat
                 string json = HttpGet("https://api.deepseek.com/user/balance", key, out status);
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 Dictionary<string, object> root = js.DeserializeObject(json) as Dictionary<string, object>;
-                if (root == null) { st.Error = "响应解析失败"; return st; }
+                if (root == null) { st.Error = Strings.ResponseParseFailed; return st; }
                 if (root.ContainsKey("is_available") && !Convert.ToBoolean(root["is_available"]))
                 {
-                    st.Error = "账户余额不可用";
+                    st.Error = Strings.AccountUnavailable;
                     return st;
                 }
                 object[] infos = root.ContainsKey("balance_infos") ? root["balance_infos"] as object[] : null;
-                if (infos == null || infos.Length == 0) { st.Error = "无余额信息"; return st; }
+                if (infos == null || infos.Length == 0) { st.Error = Strings.NoBalanceInfo; return st; }
                 Dictionary<string, object> pick = null;
                 foreach (object it in infos)
                 {
@@ -156,7 +156,7 @@ namespace QuotaFloat
                     if (pick == null) pick = d;
                     if (GetString(d, "currency") == "CNY") { pick = d; break; }
                 }
-                if (pick == null) { st.Error = "无余额信息"; return st; }
+                if (pick == null) { st.Error = Strings.NoBalanceInfo; return st; }
                 st.Currency = GetString(pick, "currency");
                 st.Total = GetDecimal(pick, "total_balance");
                 st.Ok = true;
@@ -206,9 +206,9 @@ namespace QuotaFloat
             {
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 Dictionary<string, object> root = js.DeserializeObject(json) as Dictionary<string, object>;
-                if (root == null || !root.ContainsKey("usage")) { st.Error = "响应缺少 usage"; return st; }
+                if (root == null || !root.ContainsKey("usage")) { st.Error = Strings.MissingUsage; return st; }
                 Dictionary<string, object> usage = root["usage"] as Dictionary<string, object>;
-                if (usage == null) { st.Error = "响应缺少 usage"; return st; }
+                if (usage == null) { st.Error = Strings.MissingUsage; return st; }
                 st.Rolling = ParseWindow(usage, "rolling");
                 st.Weekly = ParseWindow(usage, "weekly");
                 st.Monthly = ParseWindow(usage, "monthly");
@@ -216,7 +216,7 @@ namespace QuotaFloat
             }
             catch (Exception ex)
             {
-                st.Error = "解析失败：" + ex.Message;
+                st.Error = Strings.ParseFailed(ex.Message);
             }
             return st;
         }
@@ -284,19 +284,19 @@ namespace QuotaFloat
 
         private static string MapError(int status, Exception ex)
         {
-            if (status == 401) return "Key 无效 (401)";
-            if (status == 402) return "余额不足 (402)";
-            if (status == 403) return "无访问权限 (403)";
-            if (status == 429) return "请求过多 (429)";
+            if (status == 401) return Strings.InvalidKey(status);
+            if (status == 402) return Strings.InsufficientBalance(status);
+            if (status == 403) return Strings.Forbidden(status);
+            if (status == 429) return Strings.TooManyRequests(status);
             if (status > 0) return "HTTP " + status.ToString(CultureInfo.InvariantCulture);
             WebException we = ex as WebException;
             if (we != null)
             {
-                if (we.Status == WebExceptionStatus.Timeout) return "连接超时";
-                if (we.Status == WebExceptionStatus.NameResolutionFailure) return "域名解析失败";
-                if (we.Status == WebExceptionStatus.ConnectFailure) return "无法连接";
+                if (we.Status == WebExceptionStatus.Timeout) return Strings.Timeout;
+                if (we.Status == WebExceptionStatus.NameResolutionFailure) return Strings.DnsFailure;
+                if (we.Status == WebExceptionStatus.ConnectFailure) return Strings.ConnectFailure;
             }
-            return "网络错误";
+            return Strings.NetworkError;
         }
 
         private static string GetString(Dictionary<string, object> d, string k)

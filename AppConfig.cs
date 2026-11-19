@@ -33,6 +33,7 @@ namespace QuotaFloat
         public decimal DeepSeekBalance;
         public decimal DeepSeekSpent;
         public string DeepSeekCurrency = "CNY";
+        public string Language = "";
         public bool DeepSeekBalanceKnown;
         public int X = -999999;
         public int Y = -999999;
@@ -82,6 +83,7 @@ namespace QuotaFloat
                 c.DeepSeekSpent = GetDecimal(d, "deepseekSpent", 0m);
                 c.DeepSeekCurrency = GetStr(d, "deepseekCurrency");
                 if (string.IsNullOrEmpty(c.DeepSeekCurrency)) c.DeepSeekCurrency = "CNY";
+                c.Language = GetStr(d, "language");
                 c.DeepSeekBalanceKnown = GetBool(d, "deepseekBalanceKnown", false);
                 c.X = GetInt(d, "x", -999999);
                 c.Y = GetInt(d, "y", -999999);
@@ -113,6 +115,7 @@ namespace QuotaFloat
                 d["deepseekBalance"] = DeepSeekBalance;
                 d["deepseekSpent"] = DeepSeekSpent;
                 d["deepseekCurrency"] = DeepSeekCurrency;
+                d["language"] = Language;
                 d["deepseekBalanceKnown"] = DeepSeekBalanceKnown;
                 d["x"] = X;
                 d["y"] = Y;

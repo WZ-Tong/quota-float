@@ -283,10 +283,64 @@ namespace QuotaFloat
             }
             catch (Exception ex)
             {
-                MessageBox.Show("无法设置开机自启动：\n" + ex.Message, "QuotaFloat",
+                MessageBox.Show(Strings.AutoStartFailed(ex.Message), "QuotaFloat",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
+        }
+
+        private void ApplyLanguage()
+        {
+            Text = demoMode ? Strings.AppTitleDemo : Strings.AppTitle;
+            row5h.Caption = Strings.FiveHours;
+            rowWeek.Caption = Strings.ThisWeek;
+            rowMonth.Caption = Strings.ThisMonth;
+            row5h.Invalidate();
+            rowWeek.Invalidate();
+            rowMonth.Invalidate();
+
+            peakState = null;
+            UpdatePeakBadge();
+
+            if (!lastDeepSeekBalanceKnown)
+            {
+                deepSeekStatus.Text = cfg.DeepSeekKey.Length == 0
+                    ? Strings.NotConfiguredHint
+                    : Strings.Loading;
+            }
+            else
+            {
+                UpdateDisplay();
+            }
+
+            if (!demoMode)
+            {
+                lastFetch = DateTime.MinValue;
+                StartFetch();
+            }
+            Invalidate(true);
+        }
+
+        private void SetLanguage(string code)
+        {
+            code = Strings.Normalize(code);
+            if (code == Strings.Code) return;
+            Strings.Code = code;
+            cfg.Language = code;
+            cfg.Save();
+            ApplyLanguage();
+            if (IsHandleCreated && !IsDisposed)
+                BeginInvoke(new Action(RebuildMenu));
+        }
+
+        private void RebuildMenu()
+        {
+            if (IsDisposed) return;
+            ContextMenuStrip old = menu;
+            menu = CreateMenu();
+            ContextMenuStrip = menu;
+            AttachMenu(this);
+            if (old != null) old.Dispose();
         }
 
         private static bool HasArg(string name)
@@ -338,7 +392,7 @@ namespace QuotaFloat
             bool peak = IsPeakNow();
             if (peakState.HasValue && peakState.Value == peak) return;
             peakState = peak;
-            deepSeekPeriod.Text = peak ? "峰时" : "谷时";
+            deepSeekPeriod.Text = peak ? Strings.Peak : Strings.OffPeak;
             deepSeekPeriod.ForeColor = peak ? Palette.Red : Palette.Green;
         }
 

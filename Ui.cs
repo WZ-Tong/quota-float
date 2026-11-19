@@ -94,7 +94,7 @@ namespace QuotaFloat
 
         public static string MaskKey(string key)
         {
-            if (string.IsNullOrEmpty(key)) return "未设置";
+            if (string.IsNullOrEmpty(key)) return Strings.NotSet;
             string prefix = "";
             if (key.StartsWith("oc_sk_", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, 6);
             else if (key.StartsWith("sk-", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, 3);

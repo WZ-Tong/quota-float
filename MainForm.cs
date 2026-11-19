@@ -54,7 +54,7 @@ namespace QuotaFloat
         private readonly UsageRow row5h;
         private readonly UsageRow rowWeek;
         private readonly UsageRow rowMonth;
-        private readonly ContextMenuStrip menu;
+        private ContextMenuStrip menu;
         private ToolStripMenuItem edgeHideItem;
 
         private bool fetching;
@@ -104,7 +104,10 @@ namespace QuotaFloat
                 if (HasArg("--no-cards")) { cfg.ShowDeepSeek = false; cfg.ShowOpenCode = false; }
                 if (HasArg("--no-equation")) cfg.EquationEnabled = false;
                 if (HasArg("--no-edge")) cfg.EdgeHide = false;
+                if (HasArg("--lang=en")) cfg.Language = Strings.En;
+                if (HasArg("--lang=zh")) cfg.Language = Strings.ZhCn;
             }
+            Strings.Code = string.IsNullOrEmpty(cfg.Language) ? Strings.ZhCn : Strings.Normalize(cfg.Language);
             lightTheme = HasArg("--light") ? true : (HasArg("--dark") ? false : ResolveLightTheme());
             Palette.Apply(lightTheme);
 
@@ -118,7 +121,7 @@ namespace QuotaFloat
             TopMost = cfg.TopMost;
             ShowInTaskbar = false;
             DoubleBuffered = true;
-            Text = demoMode ? "AI 额度 (demo)" : "AI 额度";
+            Text = demoMode ? Strings.AppTitleDemo : Strings.AppTitle;
             Font = new Font("Segoe UI", 9F);
             try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
             catch { }
@@ -134,7 +137,7 @@ namespace QuotaFloat
             deepSeekPeriod.TextAlign = ContentAlignment.MiddleRight;
             dsCard.Controls.Add(deepSeekPeriod);
 
-            deepSeekStatus = NewLabel("正在读取…", 14, 30, dsCard.Width - 28, 24, 9F, FontStyle.Regular, Palette.Sub);
+            deepSeekStatus = NewLabel(Strings.Loading, 14, 30, dsCard.Width - 28, 24, 9F, FontStyle.Regular, Palette.Sub);
             deepSeekStatus.TextAlign = ContentAlignment.MiddleLeft;
             dsCard.Controls.Add(deepSeekStatus);
 
@@ -184,7 +187,7 @@ namespace QuotaFloat
             equationPanel.Controls.Add(inlineEditor);
 
             equationPanel.Visible = false;
-            deepSeekStatus.Text = cfg.DeepSeekKey.Length == 0 ? "未配置 · 三击设置" : "正在读取…";
+            deepSeekStatus.Text = cfg.DeepSeekKey.Length == 0 ? Strings.NotConfiguredHint : Strings.Loading;
 
             spentLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(1); };
             totalLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(2); };
@@ -204,120 +207,14 @@ namespace QuotaFloat
             Label goTitle = NewLabel("OpenCode", 14, 8, 160, 16, 8.25F, FontStyle.Regular, Palette.Sub);
             goCard.Controls.Add(goTitle);
 
-            row5h = NewRow("5 小时", 14, 28, goCard.Width - 28);
-            rowWeek = NewRow("本周", 14, 58, goCard.Width - 28);
-            rowMonth = NewRow("本月", 14, 88, goCard.Width - 28);
+            row5h = NewRow(Strings.FiveHours, 14, 28, goCard.Width - 28);
+            rowWeek = NewRow(Strings.ThisWeek, 14, 58, goCard.Width - 28);
+            rowMonth = NewRow(Strings.ThisMonth, 14, 88, goCard.Width - 28);
             goCard.Controls.Add(row5h);
             goCard.Controls.Add(rowWeek);
             goCard.Controls.Add(rowMonth);
 
-            menu = new ContextMenuStrip();
-            menu.Items.Add("立即刷新", null, delegate { StartFetch(); });
-            ToolStripMenuItem eqItem = new ToolStripMenuItem("显示余额等式");
-            eqItem.Checked = cfg.EquationEnabled;
-            eqItem.Click += delegate
-            {
-                cfg.EquationEnabled = !cfg.EquationEnabled;
-                eqItem.Checked = cfg.EquationEnabled;
-                cfg.Save();
-                UpdateDisplay();
-            };
-            menu.Items.Add(eqItem);
-            ToolStripMenuItem showDsItem = new ToolStripMenuItem("显示 DeepSeek");
-            showDsItem.Checked = cfg.ShowDeepSeek;
-            showDsItem.Click += delegate
-            {
-                cfg.ShowDeepSeek = !cfg.ShowDeepSeek;
-                showDsItem.Checked = cfg.ShowDeepSeek;
-                UpdateProviderLayout();
-                cfg.Save();
-            };
-            menu.Items.Add(showDsItem);
-            ToolStripMenuItem showGoItem = new ToolStripMenuItem("显示 OpenCode");
-            showGoItem.Checked = cfg.ShowOpenCode;
-            showGoItem.Click += delegate
-            {
-                cfg.ShowOpenCode = !cfg.ShowOpenCode;
-                showGoItem.Checked = cfg.ShowOpenCode;
-                UpdateProviderLayout();
-                cfg.Save();
-            };
-            menu.Items.Add(showGoItem);
-            ToolStripMenuItem top = new ToolStripMenuItem("窗口置顶");
-            top.Checked = TopMost;
-            top.Click += delegate
-            {
-                TopMost = !TopMost;
-                top.Checked = TopMost;
-                cfg.TopMost = TopMost;
-                cfg.Save();
-            };
-            menu.Items.Add(top);
-            ToolStripMenuItem themeMenu = new ToolStripMenuItem("主题");
-            ToolStripMenuItem autoItem = new ToolStripMenuItem("跟随系统");
-            ToolStripMenuItem lightItem = new ToolStripMenuItem("浅色");
-            ToolStripMenuItem darkItem = new ToolStripMenuItem("深色");
-            autoItem.Checked = cfg.ThemeMode == 0;
-            lightItem.Checked = cfg.ThemeMode == 1;
-            darkItem.Checked = cfg.ThemeMode == 2;
-            autoItem.Click += delegate
-            {
-                SetThemeMode(0);
-                autoItem.Checked = true;
-                lightItem.Checked = false;
-                darkItem.Checked = false;
-            };
-            lightItem.Click += delegate
-            {
-                SetThemeMode(1);
-                autoItem.Checked = false;
-                lightItem.Checked = true;
-                darkItem.Checked = false;
-            };
-            darkItem.Click += delegate
-            {
-                SetThemeMode(2);
-                autoItem.Checked = false;
-                lightItem.Checked = false;
-                darkItem.Checked = true;
-            };
-            themeMenu.DropDownItems.Add(autoItem);
-            themeMenu.DropDownItems.Add(lightItem);
-            themeMenu.DropDownItems.Add(darkItem);
-            menu.Items.Add(themeMenu);
-            ToolStripMenuItem lockItem = new ToolStripMenuItem("锁定宽度");
-            lockItem.Checked = cfg.WidthLocked;
-            lockItem.Click += delegate
-            {
-                cfg.WidthLocked = !cfg.WidthLocked;
-                lockItem.Checked = cfg.WidthLocked;
-                cfg.Save();
-            };
-            menu.Items.Add(lockItem);
-            edgeHideItem = new ToolStripMenuItem("贴边吸附");
-            edgeHideItem.ToolTipText = "拖到屏幕边缘时吸附，鼠标移出后自动滑出";
-            edgeHideItem.Checked = cfg.EdgeHide;
-            edgeHideItem.Click += delegate
-            {
-                cfg.EdgeHide = !cfg.EdgeHide;
-                edgeHideItem.Checked = cfg.EdgeHide;
-                cfg.Save();
-                ApplyEdgeHideSetting();
-            };
-            menu.Items.Add(edgeHideItem);
-            ToolStripMenuItem autoStartItem = new ToolStripMenuItem("开机自启动");
-            autoStartItem.ToolTipText = "当前用户登录时自动启动";
-            autoStartItem.Checked = IsAutoStartEnabled();
-            autoStartItem.Enabled = !demoMode;
-            autoStartItem.Click += delegate
-            {
-                bool enable = !autoStartItem.Checked;
-                if (SetAutoStart(enable)) autoStartItem.Checked = enable;
-            };
-            menu.Items.Add(autoStartItem);
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("设置…", null, delegate { OpenSettings(); });
-            menu.Items.Add("退出", null, delegate { Close(); });
+            menu = CreateMenu();
             ContextMenuStrip = menu;
             AttachMenu(this);
 
@@ -387,6 +284,128 @@ namespace QuotaFloat
             slideTimer = new Timer();
             slideTimer.Interval = 15;
             slideTimer.Tick += delegate { TickSlide(); };
+        }
+
+        private ContextMenuStrip CreateMenu()
+        {
+            ContextMenuStrip menu = new ContextMenuStrip();
+            menu.Items.Add(Strings.RefreshNow, null, delegate { StartFetch(); });
+            ToolStripMenuItem eqItem = new ToolStripMenuItem(Strings.ShowEquation);
+            eqItem.Checked = cfg.EquationEnabled;
+            eqItem.Click += delegate
+            {
+                cfg.EquationEnabled = !cfg.EquationEnabled;
+                eqItem.Checked = cfg.EquationEnabled;
+                cfg.Save();
+                UpdateDisplay();
+            };
+            menu.Items.Add(eqItem);
+            ToolStripMenuItem showDsItem = new ToolStripMenuItem(Strings.ShowDeepSeek);
+            showDsItem.Checked = cfg.ShowDeepSeek;
+            showDsItem.Click += delegate
+            {
+                cfg.ShowDeepSeek = !cfg.ShowDeepSeek;
+                showDsItem.Checked = cfg.ShowDeepSeek;
+                UpdateProviderLayout();
+                cfg.Save();
+            };
+            menu.Items.Add(showDsItem);
+            ToolStripMenuItem showGoItem = new ToolStripMenuItem(Strings.ShowOpenCode);
+            showGoItem.Checked = cfg.ShowOpenCode;
+            showGoItem.Click += delegate
+            {
+                cfg.ShowOpenCode = !cfg.ShowOpenCode;
+                showGoItem.Checked = cfg.ShowOpenCode;
+                UpdateProviderLayout();
+                cfg.Save();
+            };
+            menu.Items.Add(showGoItem);
+            ToolStripMenuItem top = new ToolStripMenuItem(Strings.AlwaysOnTop);
+            top.Checked = TopMost;
+            top.Click += delegate
+            {
+                TopMost = !TopMost;
+                top.Checked = TopMost;
+                cfg.TopMost = TopMost;
+                cfg.Save();
+            };
+            menu.Items.Add(top);
+            ToolStripMenuItem themeMenu = new ToolStripMenuItem(Strings.Theme);
+            ToolStripMenuItem autoItem = new ToolStripMenuItem(Strings.FollowSystem);
+            ToolStripMenuItem lightItem = new ToolStripMenuItem(Strings.Light);
+            ToolStripMenuItem darkItem = new ToolStripMenuItem(Strings.Dark);
+            autoItem.Checked = cfg.ThemeMode == 0;
+            lightItem.Checked = cfg.ThemeMode == 1;
+            darkItem.Checked = cfg.ThemeMode == 2;
+            autoItem.Click += delegate
+            {
+                SetThemeMode(0);
+                autoItem.Checked = true;
+                lightItem.Checked = false;
+                darkItem.Checked = false;
+            };
+            lightItem.Click += delegate
+            {
+                SetThemeMode(1);
+                autoItem.Checked = false;
+                lightItem.Checked = true;
+                darkItem.Checked = false;
+            };
+            darkItem.Click += delegate
+            {
+                SetThemeMode(2);
+                autoItem.Checked = false;
+                lightItem.Checked = false;
+                darkItem.Checked = true;
+            };
+            themeMenu.DropDownItems.Add(autoItem);
+            themeMenu.DropDownItems.Add(lightItem);
+            themeMenu.DropDownItems.Add(darkItem);
+            menu.Items.Add(themeMenu);
+            ToolStripMenuItem lockItem = new ToolStripMenuItem(Strings.LockWidth);
+            lockItem.Checked = cfg.WidthLocked;
+            lockItem.Click += delegate
+            {
+                cfg.WidthLocked = !cfg.WidthLocked;
+                lockItem.Checked = cfg.WidthLocked;
+                cfg.Save();
+            };
+            menu.Items.Add(lockItem);
+            edgeHideItem = new ToolStripMenuItem(Strings.EdgeSnap);
+            edgeHideItem.ToolTipText = Strings.EdgeSnapTip;
+            edgeHideItem.Checked = cfg.EdgeHide;
+            edgeHideItem.Click += delegate
+            {
+                cfg.EdgeHide = !cfg.EdgeHide;
+                edgeHideItem.Checked = cfg.EdgeHide;
+                cfg.Save();
+                ApplyEdgeHideSetting();
+            };
+            menu.Items.Add(edgeHideItem);
+            ToolStripMenuItem autoStartItem = new ToolStripMenuItem(Strings.AutoStart);
+            autoStartItem.ToolTipText = Strings.AutoStartTip;
+            autoStartItem.Checked = IsAutoStartEnabled();
+            autoStartItem.Enabled = !demoMode;
+            autoStartItem.Click += delegate
+            {
+                bool enable = !autoStartItem.Checked;
+                if (SetAutoStart(enable)) autoStartItem.Checked = enable;
+            };
+            menu.Items.Add(autoStartItem);
+            ToolStripMenuItem languageMenu = new ToolStripMenuItem(Strings.Language);
+            ToolStripMenuItem enItem = new ToolStripMenuItem(Strings.English);
+            ToolStripMenuItem zhItem = new ToolStripMenuItem(Strings.Chinese);
+            enItem.Checked = Strings.Code == Strings.En;
+            zhItem.Checked = Strings.Code == Strings.ZhCn;
+            enItem.Click += delegate { SetLanguage(Strings.En); };
+            zhItem.Click += delegate { SetLanguage(Strings.ZhCn); };
+            languageMenu.DropDownItems.Add(enItem);
+            languageMenu.DropDownItems.Add(zhItem);
+            menu.Items.Add(languageMenu);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(Strings.SettingsEllipsis, null, delegate { OpenSettings(); });
+            menu.Items.Add(Strings.Exit, null, delegate { Close(); });
+            return menu;
         }
 
         private Label NewLabel(string text, int x, int y, int w, int h, float size, FontStyle style, Color color)
