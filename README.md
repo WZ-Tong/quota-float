@@ -62,6 +62,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 - 只保留 `build.ps1` 作为唯一构建入口。
 - 默认 Release：`-optimize+ -debug-`，输出 `QuotaFloat.exe`，不生成 PDB，产物更小。
 - Debug：追加 `-Configuration Debug`，输出 `QuotaFloat.debug.exe` 和 `.pdb`，使用 `-optimize- -debug:full -define:DEBUG -target:exe`；会打开控制台，便于交互调试。
+- `DebugShell.cs` 与 `MainForm.Debug.cs` 只在 Debug 构建中参与编译；Release 源码列表会排除它们，且文件内部另有 `#if DEBUG` 双保险。
 - 脚本不写死编译器路径：依次检查 `-CompilerPath`、`CSC` 环境变量、PATH 中的 `csc.exe`，再在 `%WINDIR%\Microsoft.NET\Framework64` 和 `Framework` 下查找 v4.x 的 `csc.exe`。
 - 自动编译仓库内所有 `.cs`（排除 `bin`、`obj`），后续拆分源码无需改构建命令。
 - 覆盖 `QuotaFloat.exe` 前请先退出正在运行的实例。
@@ -97,7 +98,7 @@ quit
 ## 回归测试
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\regression.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\regression.ps1
 ```
 
 脚本会构建 Debug 版本到临时目录，使用 `--demo` 启动，通过调试控制台验证贴边、隐藏和恢复，不读取真实配置，也不依赖截图。

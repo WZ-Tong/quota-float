@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path -Parent $PSScriptRoot
+$root = $PSScriptRoot
 $build = Join-Path $root "build.ps1"
 $exe = Join-Path $env:TEMP "QuotaFloat.regression.exe"
 $pdb = [System.IO.Path]::ChangeExtension($exe, ".pdb")

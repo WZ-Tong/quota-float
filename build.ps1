@@ -64,12 +64,20 @@ $icon = Join-Path $root "app.ico"
 if (-not (Test-Path -LiteralPath $manifest)) { throw "Missing app.manifest: $manifest" }
 if (-not (Test-Path -LiteralPath $icon)) { throw "Missing app.ico: $icon" }
 
-$sources = @(
+$allSources = @(
     Get-ChildItem -LiteralPath $root -Filter "*.cs" -File -Recurse |
         Where-Object { $_.FullName -notmatch "[\\/](bin|obj)[\\/]" } |
         Sort-Object FullName |
         ForEach-Object { $_.FullName }
 )
+if ($Configuration -eq "Debug") {
+    $sources = $allSources
+} else {
+    $sources = @($allSources | Where-Object {
+        $name = Split-Path -Leaf $_
+        $name -ne "DebugShell.cs" -and $name -ne "MainForm.Debug.cs"
+    })
+}
 if ($sources.Count -eq 0) { throw "No .cs source files found." }
 
 if ([System.IO.Path]::IsPathRooted($Output)) {
