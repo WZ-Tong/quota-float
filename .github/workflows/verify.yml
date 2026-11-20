@@ -11,10 +11,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Release
         shell: powershell
-        run: .\build.ps1
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
       - name: Build Debug
         shell: powershell
-        run: .\build.ps1 -Configuration Debug
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -Configuration Debug
       - name: Verify source and versions
         shell: powershell
-        run: .\verify.ps1
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
