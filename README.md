@@ -69,11 +69,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
 - 只保留 `build.ps1` 作为唯一构建入口。
+- 每次构建先从仓库内所有拆分源码生成确定性的 `QuotaFloat.single.cs`，再只编译该单文件；文件纳入 Git，便于审阅、复制或单文件交付。
+- 需要只导出源码而不编译时运行：`powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -ExportOnly`。
 - 默认 Release：`-optimize+ -debug-`，输出 `QuotaFloat.exe`，不生成 PDB，产物更小。
 - Debug：追加 `-Configuration Debug`，输出 `QuotaFloat.debug.exe` 和 `.pdb`，使用 `-optimize- -debug:full -define:DEBUG -target:exe`；会打开控制台，便于交互调试。
-- `DebugShell.cs` 与 `MainForm.Debug.cs` 只在 Debug 构建中参与编译；Release 源码列表会排除它们，且文件内部另有 `#if DEBUG` 双保险。
+- `DebugShell.cs` 与 `MainForm.Debug.cs` 保留在单文件源码中，并由文件级 `#if DEBUG` 包裹；Release 预处理时排除，Debug 通过 `-define:DEBUG` 启用。
 - 脚本不写死编译器路径：依次检查 `-CompilerPath`、`CSC` 环境变量、PATH 中的 `csc.exe`，再在 `%WINDIR%\Microsoft.NET\Framework64` 和 `Framework` 下查找 v4.x 的 `csc.exe`。
-- 自动编译仓库内所有 `.cs`（排除 `bin`、`obj`），后续拆分源码无需改构建命令。
+- 导出器会移除各文件的 `using` 并放入各自的 `namespace QuotaFloat` 作用域，避免跨文件命名空间冲突；生成结果不含时间戳，重复构建保持字节稳定。
 - 覆盖 `QuotaFloat.exe` 前请先退出正在运行的实例。
 - 编码统一为 UTF-8：C# 源码为 UTF-8 BOM，并通过 `-codepage:65001 -utf8output` 编译；`build.ps1` 为 UTF-8 BOM；配置文件和网络读取均使用 UTF-8。
 
