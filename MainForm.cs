@@ -592,20 +592,16 @@ namespace QuotaFloat
 
         private static int MeasureEquationWidth(Label label)
         {
-            string text = string.IsNullOrEmpty(label.Text) ? "0" : label.Text;
-            Size size = TextRenderer.MeasureText(text, label.Font,
-                new Size(int.MaxValue, label.Height),
-                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-            return size.Width + UiMetrics.EquationMeasurePadding;
+            Size preferred = label.GetPreferredSize(Size.Empty);
+            return Math.Max(UiMetrics.EquationMinValueWidth,
+                preferred.Width + UiMetrics.EquationFitPadding);
         }
 
         private static int MeasureEquationSymbolWidth(Label label)
         {
-            Size size = TextRenderer.MeasureText(label.Text, label.Font,
-                new Size(int.MaxValue, label.Height),
-                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            Size preferred = label.GetPreferredSize(Size.Empty);
             return Math.Max(UiMetrics.EquationSymbolInitialWidth,
-                size.Width + UiMetrics.EquationSymbolPadding);
+                preferred.Width + UiMetrics.EquationFitPadding);
         }
 
         private static void PlaceEquation(Label label, int x, int width)

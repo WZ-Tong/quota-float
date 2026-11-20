@@ -43,7 +43,7 @@ namespace QuotaFloat
                 UiMetrics.EquationGap * UiMetrics.EquationGapCount +
                 UiMetrics.EquationAvailableInset;
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" symbolMin={18}",
+                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" symbolMin={18} balanceFit={19} spentFit={20} totalFit={21}",
                 equationPanel.Width, required,
                 required + UiMetrics.CardWidthInset,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
@@ -51,7 +51,13 @@ namespace QuotaFloat
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
                 equalsLabel.Left, equalsLabel.Width, equalsLabel.Text,
                 totalLabel.Left, totalLabel.Width, totalLabel.Text,
-                UiMetrics.EquationSymbolInitialWidth);
+                UiMetrics.EquationSymbolInitialWidth,
+                FitsPreferred(deepSeekBalance), FitsPreferred(spentLabel), FitsPreferred(totalLabel));
+        }
+
+        private static bool FitsPreferred(Label label)
+        {
+            return label.GetPreferredSize(Size.Empty).Width <= label.Width;
         }
 
         internal string DebugRefreshPolicy()

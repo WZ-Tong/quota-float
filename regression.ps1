@@ -187,6 +187,12 @@ try {
         Write-Host $out
         throw "Equation equals symbol width is too small: $($equations[0])"
     }
+    if ($equations[0] -notmatch 'balanceFit=True' -or
+        $equations[0] -notmatch 'spentFit=True' -or
+        $equations[0] -notmatch 'totalFit=True') {
+        Write-Host $out
+        throw "Equation value text is ellipsized: $($equations[0])"
+    }
     if ($policies.Count -lt 1) {
         Write-Host $out
         throw "Refresh policy snapshot is missing."
