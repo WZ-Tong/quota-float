@@ -20,7 +20,7 @@ namespace QuotaFloat
         [STAThread]
         private static void Main()
         {
-            try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; }
+            try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; }
             catch { }
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

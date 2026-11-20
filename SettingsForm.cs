@@ -18,6 +18,8 @@ namespace QuotaFloat
     // ---------- 设置窗口 ----------
     internal sealed class SettingsForm : Form
     {
+        private const int WS_EX_TOOLWINDOW = 0x80;
+
         private readonly AppConfig cfg;
         private readonly TextBox dsBox;
         private readonly TextBox goBox;
@@ -31,28 +33,28 @@ namespace QuotaFloat
             MinimizeBox = false;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(440, 178);
+            ClientSize = new Size(UiMetrics.SettingsWidth, UiMetrics.SettingsHeight);
             BackColor = Palette.Bg;
             ForeColor = Palette.Text;
-            Font = new Font("Segoe UI", 9F);
+            Font = new Font(UiMetrics.FontFamily, UiMetrics.FontBody);
             AutoScaleMode = AutoScaleMode.Dpi;
-            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleDimensions = new SizeF(UiMetrics.DefaultDpi, UiMetrics.DefaultDpi);
 
-            AddLabel("DeepSeek API Key", 16, 14, 210);
-            Label dsHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.DeepSeekKey)), 240, 14, 184);
+            AddLabel("DeepSeek API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsLabelTop, UiMetrics.SettingsLabelWidth);
+            Label dsHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.DeepSeekKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsLabelTop, UiMetrics.SettingsHintWidth);
             dsHint.TextAlign = ContentAlignment.MiddleRight;
-            dsHint.Font = new Font("Segoe UI", 7.25F);
-            dsBox = AddInput(16, 36, 408);
+            dsHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
+            dsBox = AddInput(UiMetrics.SettingsMargin, UiMetrics.SettingsInputTop, UiMetrics.SettingsInputWidth);
 
-            AddLabel("OpenCode API Key", 16, 72, 210);
-            Label goHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.OpenCodeKey)), 240, 72, 184);
+            AddLabel("OpenCode API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsLabelWidth);
+            Label goHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.OpenCodeKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsHintWidth);
             goHint.TextAlign = ContentAlignment.MiddleRight;
-            goHint.Font = new Font("Segoe UI", 7.25F);
-            goBox = AddInput(16, 94, 408);
+            goHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
+            goBox = AddInput(UiMetrics.SettingsMargin, UiMetrics.SettingsSecondInputTop, UiMetrics.SettingsInputWidth);
 
             Button save = new Button();
             save.Text = Strings.Save;
-            save.Bounds = new Rectangle(232, 132, 90, 30);
+            save.Bounds = new Rectangle(UiMetrics.SettingsSaveLeft, UiMetrics.SettingsButtonTop, UiMetrics.SettingsButtonWidth, UiMetrics.SettingsButtonHeight);
             StyleButton(save, Palette.Blue, Color.White);
             save.Click += delegate
             {
@@ -78,7 +80,7 @@ namespace QuotaFloat
 
             Button cancel = new Button();
             cancel.Text = Strings.Cancel;
-            cancel.Bounds = new Rectangle(332, 132, 90, 30);
+            cancel.Bounds = new Rectangle(UiMetrics.SettingsCancelLeft, UiMetrics.SettingsButtonTop, UiMetrics.SettingsButtonWidth, UiMetrics.SettingsButtonHeight);
             StyleButton(cancel, Palette.InputBg, Palette.Text);
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancel);
@@ -91,7 +93,7 @@ namespace QuotaFloat
         {
             Label l = new Label();
             l.Text = text;
-            l.Bounds = new Rectangle(x, y, w, 18);
+            l.Bounds = new Rectangle(x, y, w, UiMetrics.SettingsLabelHeight);
             l.ForeColor = Palette.Sub;
             l.BackColor = Color.Transparent;
             Controls.Add(l);
@@ -101,7 +103,7 @@ namespace QuotaFloat
         private TextBox AddInput(int x, int y, int w)
         {
             TextBox t = new TextBox();
-            t.Bounds = new Rectangle(x, y, w, 24);
+            t.Bounds = new Rectangle(x, y, w, UiMetrics.SettingsInputHeight);
             t.BackColor = Palette.InputBg;
             t.ForeColor = Palette.Text;
             t.BorderStyle = BorderStyle.FixedSingle;
@@ -124,7 +126,7 @@ namespace QuotaFloat
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x80;
+                cp.ExStyle |= WS_EX_TOOLWINDOW;
                 return cp;
             }
         }

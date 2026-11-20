@@ -87,8 +87,8 @@ namespace QuotaFloat
 
         public static Color LevelColor(int remaining)
         {
-            if (remaining <= 5) return Palette.Red;
-            if (remaining <= 20) return Palette.Yellow;
+            if (remaining <= UiMetrics.LevelRedPercent) return Palette.Red;
+            if (remaining <= UiMetrics.LevelYellowPercent) return Palette.Yellow;
             return Palette.Green;
         }
 
@@ -96,9 +96,9 @@ namespace QuotaFloat
         {
             if (string.IsNullOrEmpty(key)) return Strings.NotSet;
             string prefix = "";
-            if (key.StartsWith("oc_sk_", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, 6);
-            else if (key.StartsWith("sk-", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, 3);
-            string tail = key.Length >= 4 ? key.Substring(key.Length - 4) : "";
+            if (key.StartsWith("oc_sk_", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, KeyMask.OpenCodePrefixLength);
+            else if (key.StartsWith("sk-", StringComparison.OrdinalIgnoreCase)) prefix = key.Substring(0, KeyMask.DeepSeekPrefixLength);
+            string tail = key.Length >= KeyMask.TailLength ? key.Substring(key.Length - KeyMask.TailLength) : "";
             return prefix + "****" + tail;
         }
     }

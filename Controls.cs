@@ -28,7 +28,7 @@ namespace QuotaFloat
         {
             base.OnResize(e);
             if (Width <= 0 || Height <= 0) return;
-            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height), 10))
+            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height), UiMetrics.CardCornerRadius))
             {
                 Region old = Region;
                 Region = new Region(p);
@@ -41,7 +41,7 @@ namespace QuotaFloat
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using (SolidBrush b = new SolidBrush(Palette.Card))
                 e.Graphics.FillRectangle(b, ClientRectangle);
-            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width - 1, Height - 1), 10))
+            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width - UiMetrics.WindowBorderInset, Height - UiMetrics.WindowBorderInset), UiMetrics.CardCornerRadius))
             using (Pen pen = new Pen(Palette.CardBorder))
                 e.Graphics.DrawPath(pen, p);
         }
@@ -51,12 +51,14 @@ namespace QuotaFloat
     {
         public float Percent;
         public Color FillColor = Palette.Blue;
+        public bool Indeterminate;
+        public float Phase;
 
         public MiniBar()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-            Height = 4;
+            Height = UiMetrics.RefreshBarHeight;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -65,15 +67,33 @@ namespace QuotaFloat
             int w = ClientSize.Width;
             int h = ClientSize.Height;
             if (w <= 0 || h <= 0) return;
-            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, 0, w, h), 2))
+            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, 0, w, h), UiMetrics.BarCornerRadius))
             using (SolidBrush bg = new SolidBrush(Palette.BarBg))
                 e.Graphics.FillPath(bg, bgp);
-            float pct = Math.Max(0f, Math.Min(100f, Percent));
+
+            if (Indeterminate)
+            {
+                int span = Math.Max(UiMetrics.ShimmerMinSpan, w / UiMetrics.ShimmerSpanDivisor);
+                float travel = w + span;
+                float phase = Phase - (float)Math.Floor(Phase);
+                int x = (int)Math.Round(-span + travel * phase);
+                using (GraphicsPath sp = Ui.Rounded(new Rectangle(x, 0, span, h), UiMetrics.BarCornerRadius))
+                using (SolidBrush sb = new SolidBrush(Color.FromArgb(UiMetrics.ShimmerOuterAlpha, FillColor)))
+                    e.Graphics.FillPath(sb, sp);
+                int core = Math.Max(UiMetrics.ShimmerMinCore, span / UiMetrics.ShimmerCoreDivisor);
+                int coreX = x + (span - core) / 2;
+                using (GraphicsPath cp = Ui.Rounded(new Rectangle(coreX, 0, core, h), UiMetrics.BarCornerRadius))
+                using (SolidBrush cb = new SolidBrush(Color.FromArgb(UiMetrics.ShimmerCoreAlpha, FillColor)))
+                    e.Graphics.FillPath(cb, cp);
+                return;
+            }
+
+            float pct = Math.Max(0f, Math.Min(UiMetrics.PercentMax, Percent));
             if (pct <= 0f) return;
-            int fw = (int)Math.Round(w * pct / 100f);
+            int fw = (int)Math.Round(w * pct / UiMetrics.PercentMax);
             if (fw < 1) fw = 1;
             if (fw > w) fw = w;
-            using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, 0, fw, h), 2))
+            using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, 0, fw, h), UiMetrics.BarCornerRadius))
             using (SolidBrush fb = new SolidBrush(FillColor))
                 e.Graphics.FillPath(fb, fp);
         }
@@ -88,14 +108,14 @@ namespace QuotaFloat
         public string Error = "";
         public DateTimeOffset? ResetsAt;
 
-        private readonly Font captionFont = new Font("Segoe UI", 8.25F);
+        private readonly Font captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
 
         public UsageRow()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             BackColor = Palette.Card;
-            Height = 30;
+            Height = UiMetrics.UsageRowHeight;
         }
 
         private string Countdown()
@@ -131,34 +151,34 @@ namespace QuotaFloat
             Color pctColor = Remaining >= 0 ? level : Palette.Sub;
             if (Error.Length > 0 || RateLimited) { pct = "—"; pctColor = Palette.Red; }
 
-            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, 56, 16),
+            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, UiMetrics.UsageCaptionWidth, UiMetrics.UsageTextHeight),
                 Palette.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             string suffix = SuffixText();
             Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red : Palette.Sub;
-            const int suffixLeft = 62;
-            int suffixW = w - 84 - suffixLeft;
-            if (suffixW > 10)
+            const int suffixLeft = UiMetrics.UsageSuffixLeft;
+            int suffixW = w - UiMetrics.UsagePercentWidth - suffixLeft;
+            if (suffixW > UiMetrics.UsageSuffixMinWidth)
             {
-                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, 16),
+                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, UiMetrics.UsageTextHeight),
                     suffixColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
 
-            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - 84, 0, 84, 16),
+            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - UiMetrics.UsagePercentWidth, 0, UiMetrics.UsagePercentWidth, UiMetrics.UsageTextHeight),
                 pctColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            int barY = 20;
-            int barH = 4;
-            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), 2))
+            int barY = UiMetrics.UsageBarTop;
+            int barH = UiMetrics.UsageBarHeight;
+            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), UiMetrics.BarCornerRadius))
             using (SolidBrush bgb = new SolidBrush(Palette.BarBg))
                 g.FillPath(bgb, bgp);
 
             if (Remaining > 0 && Error.Length == 0)
             {
-                int fw = Math.Max(3, w * Remaining / 100);
+                int fw = Math.Max(UiMetrics.UsageBarMinWidth, w * Remaining / UiMetrics.PercentMax);
                 if (fw > w) fw = w;
-                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), 2))
+                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), UiMetrics.BarCornerRadius))
                 using (SolidBrush fb = new SolidBrush(pctColor))
                     g.FillPath(fb, fp);
             }
