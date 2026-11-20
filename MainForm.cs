@@ -212,17 +212,19 @@ namespace QuotaFloat
             deepSeekBalance.AutoEllipsis = true;
             equationPanel.Controls.Add(deepSeekBalance);
 
-            plusLabel = NewLabel("+", UiMetrics.PlusInitialLeft, 0, UiMetrics.EquationSymbolInitialWidth,
+            plusLabel = NewLabel("+", UiMetrics.PlusInitialLeft, 0, UiMetrics.EquationMinLabelWidth,
                 UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             plusLabel.TextAlign = ContentAlignment.MiddleCenter;
+            plusLabel.Width = MeasureEquationSymbolWidth(plusLabel);
             equationPanel.Controls.Add(plusLabel);
 
             spentLabel = NewValueLabel(UiMetrics.SpentInitialLeft, 0, UiMetrics.SpentInitialWidth);
             equationPanel.Controls.Add(spentLabel);
 
-            equalsLabel = NewLabel("=", UiMetrics.EqualsInitialLeft, 0, UiMetrics.EquationSymbolInitialWidth,
+            equalsLabel = NewLabel("=", UiMetrics.EqualsInitialLeft, 0, UiMetrics.EquationMinLabelWidth,
                 UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             equalsLabel.TextAlign = ContentAlignment.MiddleCenter;
+            equalsLabel.Width = MeasureEquationSymbolWidth(equalsLabel);
             equationPanel.Controls.Add(equalsLabel);
 
             totalLabel = NewValueLabel(UiMetrics.TotalInitialLeft, 0, UiMetrics.TotalInitialWidth);
@@ -600,8 +602,13 @@ namespace QuotaFloat
         private static int MeasureEquationSymbolWidth(Label label)
         {
             Size preferred = label.GetPreferredSize(Size.Empty);
-            return Math.Max(UiMetrics.EquationSymbolInitialWidth,
+            return Math.Max(UiMetrics.EquationMinLabelWidth,
                 preferred.Width + UiMetrics.EquationFitPadding);
+        }
+
+        private static int EquationGapValue(Control control)
+        {
+            return Math.Max(1, (int)Math.Round(control.Font.Height * UiMetrics.EquationGapRatio));
         }
 
         private static void PlaceEquation(Label label, int x, int width)
@@ -620,7 +627,7 @@ namespace QuotaFloat
                 MeasureEquationWidth(totalLabel) +
                 MeasureEquationSymbolWidth(plusLabel) +
                 MeasureEquationSymbolWidth(equalsLabel) +
-                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                EquationGapValue(plusLabel) * UiMetrics.EquationGapCount +
                 UiMetrics.EquationAvailableInset +
                 UiMetrics.CardWidthInset;
             return Math.Max(AppConfig.MinWindowWidth,
@@ -671,7 +678,7 @@ namespace QuotaFloat
 
             int available = equationPanel.Width - UiMetrics.EquationAvailableInset;
             if (available < UiMetrics.EquationMinAvailableWidth) return;
-            int gap = UiMetrics.EquationGap;
+            int gap = EquationGapValue(plusLabel);
             int plusWidth = MeasureEquationSymbolWidth(plusLabel);
             int equalsWidth = MeasureEquationSymbolWidth(equalsLabel);
             int symbolsWidth = plusWidth + equalsWidth;

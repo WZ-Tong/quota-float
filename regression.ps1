@@ -149,14 +149,6 @@ try {
         Write-Host $out
         throw "Equation layout snapshot is missing."
     }
-    $symbolMin = 0
-    if ($equations[0] -match 'symbolMin=(\d+)') {
-        $symbolMin = [int]$Matches[1]
-    }
-    else {
-        Write-Host $out
-        throw "Equation symbol minimum width is missing: $($equations[0])"
-    }
     if ($equations[0] -match 'requiredWindow=(\d+)') {
         $requiredWindow = [int]$Matches[1]
         if ($lines[0] -match 'bounds=\d+,\d+,(\d+),') {
@@ -175,21 +167,15 @@ try {
         Write-Host $out
         throw "Equation plus symbol is missing or clipped: $($equations[0])"
     }
-    if ([int]$Matches[2] -lt $symbolMin) {
-        Write-Host $out
-        throw "Equation plus symbol width is too small: $($equations[0])"
-    }
     if ($equations[0] -notmatch 'equals=(\d+),(\d+),"="') {
         Write-Host $out
         throw "Equation equals symbol is missing or clipped: $($equations[0])"
     }
-    if ([int]$Matches[2] -lt $symbolMin) {
-        Write-Host $out
-        throw "Equation equals symbol width is too small: $($equations[0])"
-    }
     if ($equations[0] -notmatch 'balanceFit=True' -or
         $equations[0] -notmatch 'spentFit=True' -or
-        $equations[0] -notmatch 'totalFit=True') {
+        $equations[0] -notmatch 'totalFit=True' -or
+        $equations[0] -notmatch 'plusFit=True' -or
+        $equations[0] -notmatch 'equalsFit=True') {
         Write-Host $out
         throw "Equation value text is ellipsized: $($equations[0])"
     }

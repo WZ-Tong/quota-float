@@ -40,10 +40,10 @@ namespace QuotaFloat
                 MeasureEquationWidth(totalLabel) +
                 MeasureEquationSymbolWidth(plusLabel) +
                 MeasureEquationSymbolWidth(equalsLabel) +
-                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                EquationGapValue(plusLabel) * UiMetrics.EquationGapCount +
                 UiMetrics.EquationAvailableInset;
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" symbolMin={18} balanceFit={19} spentFit={20} totalFit={21}",
+                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" balanceFit={18} spentFit={19} totalFit={20} plusFit={21} equalsFit={22}",
                 equationPanel.Width, required,
                 required + UiMetrics.CardWidthInset,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
@@ -51,8 +51,8 @@ namespace QuotaFloat
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
                 equalsLabel.Left, equalsLabel.Width, equalsLabel.Text,
                 totalLabel.Left, totalLabel.Width, totalLabel.Text,
-                UiMetrics.EquationSymbolInitialWidth,
-                FitsPreferred(deepSeekBalance), FitsPreferred(spentLabel), FitsPreferred(totalLabel));
+                FitsPreferred(deepSeekBalance), FitsPreferred(spentLabel), FitsPreferred(totalLabel),
+                FitsPreferred(plusLabel), FitsPreferred(equalsLabel));
         }
 
         private static bool FitsPreferred(Label label)
