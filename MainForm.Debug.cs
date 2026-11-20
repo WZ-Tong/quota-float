@@ -35,9 +35,17 @@ namespace QuotaFloat
 
         internal string DebugEquation()
         {
+            int required = MeasureEquationWidth(deepSeekBalance) +
+                MeasureEquationWidth(spentLabel) +
+                MeasureEquationWidth(totalLabel) +
+                MeasureEquationSymbolWidth(plusLabel) +
+                MeasureEquationSymbolWidth(equalsLabel) +
+                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                UiMetrics.EquationAvailableInset;
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\" symbolMin={16}",
-                equationPanel.Width,
+                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" symbolMin={18}",
+                equationPanel.Width, required,
+                required + UiMetrics.CardWidthInset,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
                 plusLabel.Left, plusLabel.Width, plusLabel.Text,
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
@@ -89,6 +97,7 @@ namespace QuotaFloat
             hideNotBefore = DateTime.MinValue;
             hiddenHoverStart = DateTime.MinValue;
             edgeTimer.Start();
+            SyncHighResolutionTimer();
             Invalidate();
         }
 
@@ -107,6 +116,7 @@ namespace QuotaFloat
             hintAlpha = 0f;
             edgeTimer.Stop();
             Location = new Point(x, y);
+            SyncHighResolutionTimer();
             Invalidate();
         }
     }

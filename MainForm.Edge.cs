@@ -177,6 +177,11 @@ namespace QuotaFloat
 
         private void ShowEdge()
         {
+            if (pendingEquationWidth)
+            {
+                pendingEquationWidth = false;
+                EnsureEquationWidth();
+            }
             StartSlide(false);
             RefreshIfStaleOnReveal();
         }
@@ -202,7 +207,15 @@ namespace QuotaFloat
                 slideTimer.Stop();
                 edgeHidden = slideOutTarget;
                 hintAlpha = hintTo;
-                if (!edgeHidden) lastInside = DateTime.UtcNow;
+                if (!edgeHidden)
+                {
+                    lastInside = DateTime.UtcNow;
+                    if (pendingEquationWidth)
+                    {
+                        pendingEquationWidth = false;
+                        EnsureEquationWidth();
+                    }
+                }
                 SyncHighResolutionTimer();
                 Invalidate();
                 return;

@@ -109,6 +109,8 @@ namespace QuotaFloat
         private bool highResolutionTimer;
         private bool captureExcluded;
         private bool captureBlackedOut;
+        private bool pendingEquationWidth;
+        private bool equationWidthAdjusting;
 
         private bool AnyFetching
         {
@@ -610,6 +612,60 @@ namespace QuotaFloat
         {
             if (width < UiMetrics.EquationMinLabelWidth) width = UiMetrics.EquationMinLabelWidth;
             label.Bounds = new Rectangle(x, 0, width, UiMetrics.EquationLabelHeight);
+        }
+
+        private int RequiredEquationWindowWidth()
+        {
+            if (!cfg.EquationEnabled || !lastDeepSeekBalanceKnown ||
+                equationPanel == null || deepSeekBalance == null)
+                return AppConfig.MinWindowWidth;
+            int needed = MeasureEquationWidth(deepSeekBalance) +
+                MeasureEquationWidth(spentLabel) +
+                MeasureEquationWidth(totalLabel) +
+                MeasureEquationSymbolWidth(plusLabel) +
+                MeasureEquationSymbolWidth(equalsLabel) +
+                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                UiMetrics.EquationAvailableInset +
+                UiMetrics.CardWidthInset;
+            return Math.Max(AppConfig.MinWindowWidth,
+                Math.Min(AppConfig.MaxWindowWidth, needed));
+        }
+
+        private void EnsureEquationWidth()
+        {
+            if (equationWidthAdjusting || !IsHandleCreated) return;
+            int required = RequiredEquationWindowWidth();
+            if (ClientSize.Width >= required) return;
+            if (slideAnimating)
+            {
+                pendingEquationWidth = true;
+                return;
+            }
+
+            equationWidthAdjusting = true;
+            try
+            {
+                bool hidden = edgeHidden;
+                int oldRight = Right;
+                ClientSize = new Size(required, ClientSize.Height);
+                if (dockedEdge == EdgeMetrics.DockRight)
+                    Left = oldRight - Width;
+                else if (dockedEdge == EdgeMetrics.DockLeft)
+                    Left = Screen.FromControl(this).WorkingArea.Left;
+                else
+                {
+                    Rectangle wa = Screen.FromControl(this).WorkingArea;
+                    if (Right > wa.Right) Left = wa.Right - Width;
+                    if (Left < wa.Left) Left = wa.Left;
+                }
+                if (dockedEdge != EdgeMetrics.DockNone)
+                    Location = hidden ? HiddenLocation() : VisibleLocation();
+                cfg.WindowWidth = ClientSize.Width;
+            }
+            finally
+            {
+                equationWidthAdjusting = false;
+            }
         }
 
         private void LayoutEquation()

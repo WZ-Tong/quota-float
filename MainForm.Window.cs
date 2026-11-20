@@ -86,7 +86,8 @@ namespace QuotaFloat
                 int dx = Cursor.Position.X - resizeStartX;
                 Rectangle b = resizeStartBounds;
                 int frame = Width - ClientSize.Width;
-                int minOuter = AppConfig.MinWindowWidth + frame;
+                int minClient = Math.Max(AppConfig.MinWindowWidth, RequiredEquationWindowWidth());
+                int minOuter = minClient + frame;
                 int maxOuter = AppConfig.MaxWindowWidth + frame;
                 if (resizeEdge == UiMetrics.ResizeDirectionLeft)
                 {
@@ -239,6 +240,7 @@ namespace QuotaFloat
             barTimer.Start();
             if (demoMode) ApplyDemo();
             else StartFetch();
+            EnsureEquationWidth();
 
             bool startupDocked = false;
             if (cfg.EdgeHide && cfg.EdgeDock >= EdgeMetrics.DockLeft &&

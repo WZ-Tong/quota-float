@@ -157,6 +157,20 @@ try {
         Write-Host $out
         throw "Equation symbol minimum width is missing: $($equations[0])"
     }
+    if ($equations[0] -match 'requiredWindow=(\d+)') {
+        $requiredWindow = [int]$Matches[1]
+        if ($lines[0] -match 'bounds=\d+,\d+,(\d+),') {
+            $actualWidth = [int]$Matches[1]
+            if ($actualWidth -lt $requiredWindow) {
+                Write-Host $out
+                throw "Window width $actualWidth is below equation requirement $requiredWindow."
+            }
+        }
+    }
+    else {
+        Write-Host $out
+        throw "Equation required window width is missing: $($equations[0])"
+    }
     if ($equations[0] -notmatch 'plus=(\d+),(\d+),"\+"') {
         Write-Host $out
         throw "Equation plus symbol is missing or clipped: $($equations[0])"

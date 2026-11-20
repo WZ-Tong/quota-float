@@ -1219,6 +1219,8 @@ namespace QuotaFloat
         private bool highResolutionTimer;
         private bool captureExcluded;
         private bool captureBlackedOut;
+        private bool pendingEquationWidth;
+        private bool equationWidthAdjusting;
 
         private bool AnyFetching
         {
@@ -1722,6 +1724,60 @@ namespace QuotaFloat
             label.Bounds = new Rectangle(x, 0, width, UiMetrics.EquationLabelHeight);
         }
 
+        private int RequiredEquationWindowWidth()
+        {
+            if (!cfg.EquationEnabled || !lastDeepSeekBalanceKnown ||
+                equationPanel == null || deepSeekBalance == null)
+                return AppConfig.MinWindowWidth;
+            int needed = MeasureEquationWidth(deepSeekBalance) +
+                MeasureEquationWidth(spentLabel) +
+                MeasureEquationWidth(totalLabel) +
+                MeasureEquationSymbolWidth(plusLabel) +
+                MeasureEquationSymbolWidth(equalsLabel) +
+                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                UiMetrics.EquationAvailableInset +
+                UiMetrics.CardWidthInset;
+            return Math.Max(AppConfig.MinWindowWidth,
+                Math.Min(AppConfig.MaxWindowWidth, needed));
+        }
+
+        private void EnsureEquationWidth()
+        {
+            if (equationWidthAdjusting || !IsHandleCreated) return;
+            int required = RequiredEquationWindowWidth();
+            if (ClientSize.Width >= required) return;
+            if (slideAnimating)
+            {
+                pendingEquationWidth = true;
+                return;
+            }
+
+            equationWidthAdjusting = true;
+            try
+            {
+                bool hidden = edgeHidden;
+                int oldRight = Right;
+                ClientSize = new Size(required, ClientSize.Height);
+                if (dockedEdge == EdgeMetrics.DockRight)
+                    Left = oldRight - Width;
+                else if (dockedEdge == EdgeMetrics.DockLeft)
+                    Left = Screen.FromControl(this).WorkingArea.Left;
+                else
+                {
+                    Rectangle wa = Screen.FromControl(this).WorkingArea;
+                    if (Right > wa.Right) Left = wa.Right - Width;
+                    if (Left < wa.Left) Left = wa.Left;
+                }
+                if (dockedEdge != EdgeMetrics.DockNone)
+                    Location = hidden ? HiddenLocation() : VisibleLocation();
+                cfg.WindowWidth = ClientSize.Width;
+            }
+            finally
+            {
+                equationWidthAdjusting = false;
+            }
+        }
+
         private void LayoutEquation()
         {
             if (equationPanel == null || deepSeekBalance == null || spentLabel == null ||
@@ -1884,9 +1940,17 @@ namespace QuotaFloat
 
         internal string DebugEquation()
         {
+            int required = MeasureEquationWidth(deepSeekBalance) +
+                MeasureEquationWidth(spentLabel) +
+                MeasureEquationWidth(totalLabel) +
+                MeasureEquationSymbolWidth(plusLabel) +
+                MeasureEquationSymbolWidth(equalsLabel) +
+                UiMetrics.EquationGap * UiMetrics.EquationGapCount +
+                UiMetrics.EquationAvailableInset;
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\" symbolMin={16}",
-                equationPanel.Width,
+                "eqpanel={0} requiredPanel={1} requiredWindow={2} balance={3},{4},\"{5}\" plus={6},{7},\"{8}\" spent={9},{10},\"{11}\" equals={12},{13},\"{14}\" total={15},{16},\"{17}\" symbolMin={18}",
+                equationPanel.Width, required,
+                required + UiMetrics.CardWidthInset,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
                 plusLabel.Left, plusLabel.Width, plusLabel.Text,
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
@@ -1938,6 +2002,7 @@ namespace QuotaFloat
             hideNotBefore = DateTime.MinValue;
             hiddenHoverStart = DateTime.MinValue;
             edgeTimer.Start();
+            SyncHighResolutionTimer();
             Invalidate();
         }
 
@@ -1956,6 +2021,7 @@ namespace QuotaFloat
             hintAlpha = 0f;
             edgeTimer.Stop();
             Location = new Point(x, y);
+            SyncHighResolutionTimer();
             Invalidate();
         }
     }
@@ -2141,6 +2207,11 @@ namespace QuotaFloat
 
         private void ShowEdge()
         {
+            if (pendingEquationWidth)
+            {
+                pendingEquationWidth = false;
+                EnsureEquationWidth();
+            }
             StartSlide(false);
             RefreshIfStaleOnReveal();
         }
@@ -2166,7 +2237,15 @@ namespace QuotaFloat
                 slideTimer.Stop();
                 edgeHidden = slideOutTarget;
                 hintAlpha = hintTo;
-                if (!edgeHidden) lastInside = DateTime.UtcNow;
+                if (!edgeHidden)
+                {
+                    lastInside = DateTime.UtcNow;
+                    if (pendingEquationWidth)
+                    {
+                        pendingEquationWidth = false;
+                        EnsureEquationWidth();
+                    }
+                }
                 SyncHighResolutionTimer();
                 Invalidate();
                 return;
@@ -3571,7 +3650,8 @@ namespace QuotaFloat
                 int dx = Cursor.Position.X - resizeStartX;
                 Rectangle b = resizeStartBounds;
                 int frame = Width - ClientSize.Width;
-                int minOuter = AppConfig.MinWindowWidth + frame;
+                int minClient = Math.Max(AppConfig.MinWindowWidth, RequiredEquationWindowWidth());
+                int minOuter = minClient + frame;
                 int maxOuter = AppConfig.MaxWindowWidth + frame;
                 if (resizeEdge == UiMetrics.ResizeDirectionLeft)
                 {
@@ -3724,6 +3804,7 @@ namespace QuotaFloat
             barTimer.Start();
             if (demoMode) ApplyDemo();
             else StartFetch();
+            EnsureEquationWidth();
 
             bool startupDocked = false;
             if (cfg.EdgeHide && cfg.EdgeDock >= EdgeMetrics.DockLeft &&
