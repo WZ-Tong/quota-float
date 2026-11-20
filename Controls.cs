@@ -274,7 +274,8 @@ namespace QuotaFloat
         public string Error = "";
         public DateTimeOffset? ResetsAt;
 
-        private readonly Font captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
+        private Font captionFont;
+        private float captionScale = 1f;
         private bool animating;
         private float displayRemaining;
         private float animationFrom;
@@ -286,6 +287,12 @@ namespace QuotaFloat
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             BackColor = Palette.Card;
             Height = UiMetrics.UsageRowHeight;
+            captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
+        }
+
+        private static int Scaled(int value, float scale)
+        {
+            return Math.Max(1, (int)Math.Round(value * scale));
         }
 
         public void SetAnimatedRemaining(int target, long nowMilliseconds, bool animate)
@@ -354,32 +361,48 @@ namespace QuotaFloat
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             int w = ClientSize.Width;
+            float scale = Height / (float)UiMetrics.UsageRowHeight;
+            if (scale <= 0f) scale = 1f;
+            if (Math.Abs(scale - captionScale) >= UiMetrics.FontScaleTolerance)
+            {
+                captionFont.Dispose();
+                captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption * scale);
+                captionScale = scale;
+            }
+
+            int textH = Scaled(UiMetrics.UsageTextHeight, scale);
+            int captionW = Scaled(UiMetrics.UsageCaptionWidth, scale);
+            int suffixLeft = Scaled(UiMetrics.UsageSuffixLeft, scale);
+            int percentW = Scaled(UiMetrics.UsagePercentWidth, scale);
+            int suffixMin = Scaled(UiMetrics.UsageSuffixMinWidth, scale);
+            int barY = Scaled(UiMetrics.UsageBarTop, scale);
+            int barH = Scaled(UiMetrics.UsageBarHeight, scale);
+            int barMin = Scaled(UiMetrics.UsageBarMinWidth, scale);
+            int radius = Scaled(UiMetrics.BarCornerRadius, scale);
+
             Color level = Ui.LevelColor(Remaining);
             string pct = Remaining >= 0 ? Strings.Remaining(Remaining) : "—";
             Color pctColor = Remaining >= 0 ? level : Palette.Sub;
             if (Error.Length > 0 || RateLimited) { pct = "—"; pctColor = Palette.Red; }
 
-            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, UiMetrics.UsageCaptionWidth, UiMetrics.UsageTextHeight),
+            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, captionW, textH),
                 Palette.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             string suffix = SuffixText();
             Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red :
                 (Stale && Remaining >= 0 ? Palette.Yellow : Palette.Sub);
-            const int suffixLeft = UiMetrics.UsageSuffixLeft;
-            int suffixW = w - UiMetrics.UsagePercentWidth - suffixLeft;
-            if (suffixW > UiMetrics.UsageSuffixMinWidth)
+            int suffixW = w - percentW - suffixLeft;
+            if (suffixW > suffixMin)
             {
-                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, UiMetrics.UsageTextHeight),
+                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, textH),
                     suffixColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
 
-            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - UiMetrics.UsagePercentWidth, 0, UiMetrics.UsagePercentWidth, UiMetrics.UsageTextHeight),
+            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - percentW, 0, percentW, textH),
                 pctColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            int barY = UiMetrics.UsageBarTop;
-            int barH = UiMetrics.UsageBarHeight;
-            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), UiMetrics.BarCornerRadius))
+            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), radius))
             using (SolidBrush bgb = new SolidBrush(Palette.BarBg))
                 g.FillPath(bgb, bgp);
 
@@ -387,10 +410,10 @@ namespace QuotaFloat
             float barPct = Math.Max(0f, Math.Min(UiMetrics.PercentMax, barRemaining));
             if (barPct > 0f && Error.Length == 0)
             {
-                int fw = Math.Max(UiMetrics.UsageBarMinWidth,
+                int fw = Math.Max(barMin,
                     (int)Math.Round(w * barPct / UiMetrics.PercentMax));
                 if (fw > w) fw = w;
-                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), UiMetrics.BarCornerRadius))
+                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), radius))
                 using (SolidBrush fb = new SolidBrush(pctColor))
                     g.FillPath(fb, fp);
             }

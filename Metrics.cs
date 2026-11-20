@@ -13,6 +13,7 @@ namespace QuotaFloat
         public const float FontValue = 12f;
         public const float FontBalance = 14f;
         public const float DefaultDpi = 96f;
+        public const float FontScaleTolerance = 0.01f;
 
         public const int WindowCornerRadius = 12;
         public const int CardCornerRadius = 10;

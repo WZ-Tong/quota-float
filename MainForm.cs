@@ -70,8 +70,11 @@ namespace QuotaFloat
 
         private bool fetchingDeepSeek;
         private bool fetchingOpenCode;
+        private readonly object fetchLock = new object();
         private int deepSeekRequestVersion;
         private int openCodeRequestVersion;
+        private System.Threading.CancellationTokenSource deepSeekCancellation;
+        private System.Threading.CancellationTokenSource openCodeCancellation;
         private int deepSeekFailureCount;
         private int openCodeFailureCount;
         private DateTime? deepSeekLastSuccess;

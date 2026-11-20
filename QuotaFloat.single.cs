@@ -564,7 +564,8 @@ namespace QuotaFloat
         public string Error = "";
         public DateTimeOffset? ResetsAt;
 
-        private readonly Font captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
+        private Font captionFont;
+        private float captionScale = 1f;
         private bool animating;
         private float displayRemaining;
         private float animationFrom;
@@ -576,6 +577,12 @@ namespace QuotaFloat
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             BackColor = Palette.Card;
             Height = UiMetrics.UsageRowHeight;
+            captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
+        }
+
+        private static int Scaled(int value, float scale)
+        {
+            return Math.Max(1, (int)Math.Round(value * scale));
         }
 
         public void SetAnimatedRemaining(int target, long nowMilliseconds, bool animate)
@@ -644,32 +651,48 @@ namespace QuotaFloat
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             int w = ClientSize.Width;
+            float scale = Height / (float)UiMetrics.UsageRowHeight;
+            if (scale <= 0f) scale = 1f;
+            if (Math.Abs(scale - captionScale) >= UiMetrics.FontScaleTolerance)
+            {
+                captionFont.Dispose();
+                captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption * scale);
+                captionScale = scale;
+            }
+
+            int textH = Scaled(UiMetrics.UsageTextHeight, scale);
+            int captionW = Scaled(UiMetrics.UsageCaptionWidth, scale);
+            int suffixLeft = Scaled(UiMetrics.UsageSuffixLeft, scale);
+            int percentW = Scaled(UiMetrics.UsagePercentWidth, scale);
+            int suffixMin = Scaled(UiMetrics.UsageSuffixMinWidth, scale);
+            int barY = Scaled(UiMetrics.UsageBarTop, scale);
+            int barH = Scaled(UiMetrics.UsageBarHeight, scale);
+            int barMin = Scaled(UiMetrics.UsageBarMinWidth, scale);
+            int radius = Scaled(UiMetrics.BarCornerRadius, scale);
+
             Color level = Ui.LevelColor(Remaining);
             string pct = Remaining >= 0 ? Strings.Remaining(Remaining) : "—";
             Color pctColor = Remaining >= 0 ? level : Palette.Sub;
             if (Error.Length > 0 || RateLimited) { pct = "—"; pctColor = Palette.Red; }
 
-            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, UiMetrics.UsageCaptionWidth, UiMetrics.UsageTextHeight),
+            TextRenderer.DrawText(g, Caption, captionFont, new Rectangle(0, 0, captionW, textH),
                 Palette.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             string suffix = SuffixText();
             Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red :
                 (Stale && Remaining >= 0 ? Palette.Yellow : Palette.Sub);
-            const int suffixLeft = UiMetrics.UsageSuffixLeft;
-            int suffixW = w - UiMetrics.UsagePercentWidth - suffixLeft;
-            if (suffixW > UiMetrics.UsageSuffixMinWidth)
+            int suffixW = w - percentW - suffixLeft;
+            if (suffixW > suffixMin)
             {
-                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, UiMetrics.UsageTextHeight),
+                TextRenderer.DrawText(g, suffix, captionFont, new Rectangle(suffixLeft, 0, suffixW, textH),
                     suffixColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis);
             }
 
-            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - UiMetrics.UsagePercentWidth, 0, UiMetrics.UsagePercentWidth, UiMetrics.UsageTextHeight),
+            TextRenderer.DrawText(g, pct, captionFont, new Rectangle(w - percentW, 0, percentW, textH),
                 pctColor, TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
-            int barY = UiMetrics.UsageBarTop;
-            int barH = UiMetrics.UsageBarHeight;
-            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), UiMetrics.BarCornerRadius))
+            using (GraphicsPath bgp = Ui.Rounded(new Rectangle(0, barY, w, barH), radius))
             using (SolidBrush bgb = new SolidBrush(Palette.BarBg))
                 g.FillPath(bgb, bgp);
 
@@ -677,10 +700,10 @@ namespace QuotaFloat
             float barPct = Math.Max(0f, Math.Min(UiMetrics.PercentMax, barRemaining));
             if (barPct > 0f && Error.Length == 0)
             {
-                int fw = Math.Max(UiMetrics.UsageBarMinWidth,
+                int fw = Math.Max(barMin,
                     (int)Math.Round(w * barPct / UiMetrics.PercentMax));
                 if (fw > w) fw = w;
-                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), UiMetrics.BarCornerRadius))
+                using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), radius))
                 using (SolidBrush fb = new SolidBrush(pctColor))
                     g.FillPath(fb, fp);
             }
@@ -1180,8 +1203,11 @@ namespace QuotaFloat
 
         private bool fetchingDeepSeek;
         private bool fetchingOpenCode;
+        private readonly object fetchLock = new object();
         private int deepSeekRequestVersion;
         private int openCodeRequestVersion;
+        private System.Threading.CancellationTokenSource deepSeekCancellation;
+        private System.Threading.CancellationTokenSource openCodeCancellation;
         private int deepSeekFailureCount;
         private int openCodeFailureCount;
         private DateTime? deepSeekLastSuccess;
@@ -2499,6 +2525,7 @@ namespace QuotaFloat
     using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Web.Script.Serialization;
     using System.Windows.Forms;
@@ -2521,10 +2548,13 @@ namespace QuotaFloat
                 return;
             }
 
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            lock (fetchLock) { deepSeekCancellation = cancellation; }
+            CancellationToken token = cancellation.Token;
             Task<DeepSeekState>.Factory.StartNew(delegate
             {
-                return FetchDeepSeek(key);
-            }).ContinueWith(delegate(Task<DeepSeekState> t)
+                return FetchDeepSeek(key, token);
+            }, token).ContinueWith(delegate(Task<DeepSeekState> t)
             {
                 try
                 {
@@ -2545,6 +2575,15 @@ namespace QuotaFloat
                     }));
                 }
                 catch { }
+                finally
+                {
+                    lock (fetchLock)
+                    {
+                        if (ReferenceEquals(deepSeekCancellation, cancellation))
+                            deepSeekCancellation = null;
+                    }
+                    cancellation.Dispose();
+                }
             });
         }
 
@@ -2563,10 +2602,13 @@ namespace QuotaFloat
                 return;
             }
 
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            lock (fetchLock) { openCodeCancellation = cancellation; }
+            CancellationToken token = cancellation.Token;
             Task<GoState>.Factory.StartNew(delegate
             {
-                return FetchGo(key);
-            }).ContinueWith(delegate(Task<GoState> t)
+                return FetchGo(key, token);
+            }, token).ContinueWith(delegate(Task<GoState> t)
             {
                 try
                 {
@@ -2587,11 +2629,27 @@ namespace QuotaFloat
                     }));
                 }
                 catch { }
+                finally
+                {
+                    lock (fetchLock)
+                    {
+                        if (ReferenceEquals(openCodeCancellation, cancellation))
+                            openCodeCancellation = null;
+                    }
+                    cancellation.Dispose();
+                }
             });
         }
 
         private void InvalidateDeepSeekFetch()
         {
+            CancellationTokenSource cancellation;
+            lock (fetchLock) { cancellation = deepSeekCancellation; }
+            if (cancellation != null)
+            {
+                try { cancellation.Cancel(); }
+                catch (ObjectDisposedException) { }
+            }
             deepSeekRequestVersion++;
             deepSeekFailureCount = 0;
             fetchingDeepSeek = false;
@@ -2602,6 +2660,13 @@ namespace QuotaFloat
 
         private void InvalidateOpenCodeFetch()
         {
+            CancellationTokenSource cancellation;
+            lock (fetchLock) { cancellation = openCodeCancellation; }
+            if (cancellation != null)
+            {
+                try { cancellation.Cancel(); }
+                catch (ObjectDisposedException) { }
+            }
             openCodeRequestVersion++;
             openCodeFailureCount = 0;
             fetchingOpenCode = false;
@@ -2752,7 +2817,7 @@ namespace QuotaFloat
             return string.IsNullOrEmpty(currency) ? "" : currency + " ";
         }
 
-        private static DeepSeekState FetchDeepSeek(string key)
+        private static DeepSeekState FetchDeepSeek(string key, CancellationToken token)
         {
             DeepSeekState st = new DeepSeekState();
             if (string.IsNullOrEmpty(key)) return st;
@@ -2760,7 +2825,7 @@ namespace QuotaFloat
             int status = 0;
             try
             {
-                string json = HttpGet("https://api.deepseek.com/user/balance", key, out status);
+                string json = HttpGet("https://api.deepseek.com/user/balance", key, token, out status);
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 Dictionary<string, object> root = js.DeserializeObject(json) as Dictionary<string, object>;
                 if (root == null) { st.Error = Strings.ResponseParseFailed; return st; }
@@ -2784,6 +2849,10 @@ namespace QuotaFloat
                 st.Total = GetDecimal(pick, "total_balance");
                 st.Ok = true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 st.Error = MapError(status, ex);
@@ -2791,7 +2860,7 @@ namespace QuotaFloat
             return st;
         }
 
-        private static GoState FetchGo(string key)
+        private static GoState FetchGo(string key, CancellationToken token)
         {
             GoState st = new GoState();
             if (string.IsNullOrEmpty(key)) return st;
@@ -2809,9 +2878,13 @@ namespace QuotaFloat
             {
                 try
                 {
-                    json = HttpGet(url, key, out status);
+                    json = HttpGet(url, key, token, out status);
                     last = null;
                     break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -2880,7 +2953,7 @@ namespace QuotaFloat
             return null;
         }
 
-        private static string HttpGet(string url, string key, out int status)
+        private static string HttpGet(string url, string key, CancellationToken token, out int status)
         {
             status = 0;
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
@@ -2890,20 +2963,25 @@ namespace QuotaFloat
             req.Accept = "application/json";
             req.Timeout = Timing.NetworkTimeoutMilliseconds;
             req.ReadWriteTimeout = Timing.NetworkTimeoutMilliseconds;
-            try
+            using (token.Register(req.Abort))
             {
-                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                try
                 {
-                    status = (int)resp.StatusCode;
-                    using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
-                        return sr.ReadToEnd();
+                    using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                    {
+                        status = (int)resp.StatusCode;
+                        using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                            return sr.ReadToEnd();
+                    }
                 }
-            }
-            catch (WebException we)
-            {
-                HttpWebResponse hr = we.Response as HttpWebResponse;
-                if (hr != null) status = (int)hr.StatusCode;
-                throw;
+                catch (WebException we)
+                {
+                    if (token.IsCancellationRequested)
+                        throw new OperationCanceledException(token);
+                    HttpWebResponse hr = we.Response as HttpWebResponse;
+                    if (hr != null) status = (int)hr.StatusCode;
+                    throw;
+                }
             }
         }
 
@@ -3961,6 +4039,7 @@ namespace QuotaFloat
         public const float FontValue = 12f;
         public const float FontBalance = 14f;
         public const float DefaultDpi = 96f;
+        public const float FontScaleTolerance = 0.01f;
 
         public const int WindowCornerRadius = 12;
         public const int CardCornerRadius = 10;

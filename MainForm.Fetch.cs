@@ -9,6 +9,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -34,10 +35,13 @@ namespace QuotaFloat
                 return;
             }
 
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            lock (fetchLock) { deepSeekCancellation = cancellation; }
+            CancellationToken token = cancellation.Token;
             Task<DeepSeekState>.Factory.StartNew(delegate
             {
-                return FetchDeepSeek(key);
-            }).ContinueWith(delegate(Task<DeepSeekState> t)
+                return FetchDeepSeek(key, token);
+            }, token).ContinueWith(delegate(Task<DeepSeekState> t)
             {
                 try
                 {
@@ -58,6 +62,15 @@ namespace QuotaFloat
                     }));
                 }
                 catch { }
+                finally
+                {
+                    lock (fetchLock)
+                    {
+                        if (ReferenceEquals(deepSeekCancellation, cancellation))
+                            deepSeekCancellation = null;
+                    }
+                    cancellation.Dispose();
+                }
             });
         }
 
@@ -76,10 +89,13 @@ namespace QuotaFloat
                 return;
             }
 
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            lock (fetchLock) { openCodeCancellation = cancellation; }
+            CancellationToken token = cancellation.Token;
             Task<GoState>.Factory.StartNew(delegate
             {
-                return FetchGo(key);
-            }).ContinueWith(delegate(Task<GoState> t)
+                return FetchGo(key, token);
+            }, token).ContinueWith(delegate(Task<GoState> t)
             {
                 try
                 {
@@ -100,11 +116,27 @@ namespace QuotaFloat
                     }));
                 }
                 catch { }
+                finally
+                {
+                    lock (fetchLock)
+                    {
+                        if (ReferenceEquals(openCodeCancellation, cancellation))
+                            openCodeCancellation = null;
+                    }
+                    cancellation.Dispose();
+                }
             });
         }
 
         private void InvalidateDeepSeekFetch()
         {
+            CancellationTokenSource cancellation;
+            lock (fetchLock) { cancellation = deepSeekCancellation; }
+            if (cancellation != null)
+            {
+                try { cancellation.Cancel(); }
+                catch (ObjectDisposedException) { }
+            }
             deepSeekRequestVersion++;
             deepSeekFailureCount = 0;
             fetchingDeepSeek = false;
@@ -115,6 +147,13 @@ namespace QuotaFloat
 
         private void InvalidateOpenCodeFetch()
         {
+            CancellationTokenSource cancellation;
+            lock (fetchLock) { cancellation = openCodeCancellation; }
+            if (cancellation != null)
+            {
+                try { cancellation.Cancel(); }
+                catch (ObjectDisposedException) { }
+            }
             openCodeRequestVersion++;
             openCodeFailureCount = 0;
             fetchingOpenCode = false;
@@ -265,7 +304,7 @@ namespace QuotaFloat
             return string.IsNullOrEmpty(currency) ? "" : currency + " ";
         }
 
-        private static DeepSeekState FetchDeepSeek(string key)
+        private static DeepSeekState FetchDeepSeek(string key, CancellationToken token)
         {
             DeepSeekState st = new DeepSeekState();
             if (string.IsNullOrEmpty(key)) return st;
@@ -273,7 +312,7 @@ namespace QuotaFloat
             int status = 0;
             try
             {
-                string json = HttpGet("https://api.deepseek.com/user/balance", key, out status);
+                string json = HttpGet("https://api.deepseek.com/user/balance", key, token, out status);
                 JavaScriptSerializer js = new JavaScriptSerializer();
                 Dictionary<string, object> root = js.DeserializeObject(json) as Dictionary<string, object>;
                 if (root == null) { st.Error = Strings.ResponseParseFailed; return st; }
@@ -297,6 +336,10 @@ namespace QuotaFloat
                 st.Total = GetDecimal(pick, "total_balance");
                 st.Ok = true;
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 st.Error = MapError(status, ex);
@@ -304,7 +347,7 @@ namespace QuotaFloat
             return st;
         }
 
-        private static GoState FetchGo(string key)
+        private static GoState FetchGo(string key, CancellationToken token)
         {
             GoState st = new GoState();
             if (string.IsNullOrEmpty(key)) return st;
@@ -322,9 +365,13 @@ namespace QuotaFloat
             {
                 try
                 {
-                    json = HttpGet(url, key, out status);
+                    json = HttpGet(url, key, token, out status);
                     last = null;
                     break;
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -393,7 +440,7 @@ namespace QuotaFloat
             return null;
         }
 
-        private static string HttpGet(string url, string key, out int status)
+        private static string HttpGet(string url, string key, CancellationToken token, out int status)
         {
             status = 0;
             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
@@ -403,20 +450,25 @@ namespace QuotaFloat
             req.Accept = "application/json";
             req.Timeout = Timing.NetworkTimeoutMilliseconds;
             req.ReadWriteTimeout = Timing.NetworkTimeoutMilliseconds;
-            try
+            using (token.Register(req.Abort))
             {
-                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                try
                 {
-                    status = (int)resp.StatusCode;
-                    using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
-                        return sr.ReadToEnd();
+                    using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                    {
+                        status = (int)resp.StatusCode;
+                        using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                            return sr.ReadToEnd();
+                    }
                 }
-            }
-            catch (WebException we)
-            {
-                HttpWebResponse hr = we.Response as HttpWebResponse;
-                if (hr != null) status = (int)hr.StatusCode;
-                throw;
+                catch (WebException we)
+                {
+                    if (token.IsCancellationRequested)
+                        throw new OperationCanceledException(token);
+                    HttpWebResponse hr = we.Response as HttpWebResponse;
+                    if (hr != null) status = (int)hr.StatusCode;
+                    throw;
+                }
             }
         }
 
