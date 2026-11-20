@@ -21,7 +21,7 @@
 - 前端动画按当前显示器在当前分辨率下的最高刷新率驱动：刷新倒计时、刷新流动条与贴边滑出使用单调时钟计算相位；切换显示器或分辨率后自动重新检测。
 - 截图时隐藏：默认开启，右键菜单可关闭；Windows 10 2004+ 使用 `WDA_EXCLUDEFROMCAPTURE` 从截图和录屏中排除主窗口，更早的 Windows 10 回退到 `WDA_MONITOR`（截图中显示黑色遮挡）。同时移除系统投影，避免阴影残留。
 - 黑/白主题：默认跟随系统，也可右键强制浅色/深色。
-- 无标题栏；不出现在任务栏和 Alt+Tab；左右边缘可直接拖动宽度（320–720px），支持锁定并持久化。
+- 无标题栏；不出现在任务栏和 Alt+Tab；基础宽度范围 320–720px，支持锁定并持久化。余额等式内容需要更多空间时会自动加宽到所需宽度（最高 720px），内容变短时不自动缩回。
 - 余额等式按实际文本测量并分配宽度，空间不足时使用省略号；不会因数值变化自动改变窗口宽度，避免悬浮窗跳动和贴边位置漂移。
 - 贴边滑出：拖到屏幕边缘松开后吸附；鼠标移出约 0.45 秒后，窗口用动画滑出屏幕，只在边缘保留 10px 的边；鼠标在边缘停留约 0.2 秒后滑回，停留期间不自动收起。滑出只改位置，窗口宽高保持原尺寸。贴边时边缘指示条显示剩余比例，与内部进度条一致（100% 为全填充），长度几乎贯穿整条边；轨道使用更深底色标出 100% 范围。OpenCode 按 5 小时剩余量分级填充（绿/黄/红），无 OpenCode 数据时显示 DeepSeek 余额比例（蓝），无数据为空轨道。贴边指示条按方向和长度自适应：左右贴边只有 4 段（25%，3px 间隙，不设子刻痕）；上下贴边短/中等长度 5 段（20%）、长边 10 段（10%），主分隔 5px 间隙，网格自动取 10% 或 5%。子刻痕为 3px、背景色 alpha 215、且不贯穿整条厚度，与主分隔形成父子层级；展开面板已有精确百分比文字，不叠加分隔。展开时指示条随窗口一起被拉出并同步淡出，收起时同步淡入。
 - 位置持久化：保存绝对坐标、贴边方向和沿边锚点；启动时按当前屏幕恢复，分辨率变化后仍可回到原边。若启动时处于贴边状态，约 1.5 秒后自动滑出；鼠标停留在窗口上则不收起。
@@ -93,7 +93,7 @@ QuotaFloat.exe --demo          :: 示例数据，不读写真实配置
 QuotaFloat.exe --demo --light  :: 亮色预览
 QuotaFloat.exe --demo --dark   :: 暗色预览
 QuotaFloat.exe --demo --wide   :: 宽窗口预览
-QuotaFloat.exe --demo --narrow :: 320px 最小宽度预览
+QuotaFloat.exe --demo --narrow :: 320px 基础宽度预览（等式可能自动加宽）
 QuotaFloat.exe --demo --only-ds / --only-go / --no-equation / --no-cards / --no-edge
 QuotaFloat.exe --settings      :: 启动时打开设置
 ```
@@ -128,7 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Tag v1.3.0 -CheckRemote
 ```
 
-`verify.ps1` 会重新导出并检查 `QuotaFloat.single.cs` 是否已提交、程序集版本与 Release 二进制是否一致；带 `-Tag` 时校验 tag 与版本，带 `-CheckRemote` 时确认远端 Release 只包含 `QuotaFloat.exe`。仓库根目录的 `AGENTS.md` 记录了维护与发布约束；`.github/workflows/verify.yml` 在 push、PR 或手动触发时执行 Release/Debug 构建及上述源码/版本检查，并把正式版 `QuotaFloat.exe` 上传为 CI artifact。
+`verify.ps1` 会重新导出并检查 `QuotaFloat.single.cs` 是否已提交、程序集版本与 Release 二进制是否一致；带 `-Tag` 时校验 tag 与版本，带 `-CheckRemote` 时确认远端 Release 只包含 `QuotaFloat.exe`。仓库根目录的 `AGENTS.md` 记录了维护与发布约束；`.github/workflows/build.yml` 在分支 push、PR 或手动触发时执行 Release/Debug 构建及上述源码/版本检查，并把正式版 `QuotaFloat.exe` 上传为 CI artifact。`.github/workflows/release.yml` 只在推送 `v*` tag 时运行：校验签名 tag 和版本后自动构建并创建 Release，且只上传 `QuotaFloat.exe`。
 
 ## 配置与隐私
 

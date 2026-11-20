@@ -1,0 +1,48 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require signed tag
+        shell: powershell
+        run: |
+          git fetch --force --tags origin
+          $tag = $env:GITHUB_REF_NAME
+          $body = git cat-file -p $tag
+          if ($LASTEXITCODE -ne 0) { throw "Tag $tag is missing." }
+          if (($body -join "`n") -notmatch "BEGIN PGP SIGNATURE") {
+            throw "Tag $tag is not GPG signed."
+          }
+
+      - name: Build Release
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+
+      - name: Verify tag and source
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Tag $env:GITHUB_REF_NAME
+
+      - name: Create release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME QuotaFloat.exe --title "QuotaFloat $env:GITHUB_REF_NAME" --generate-notes --verify-tag
+
+      - name: Verify release assets
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Tag $env:GITHUB_REF_NAME -CheckRemote

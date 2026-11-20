@@ -1,4 +1,4 @@
-# QuotaFloat Agent Notes
+﻿# QuotaFloat Agent Notes
 
 QuotaFloat 是一个自用 Windows 悬浮窗，显示 DeepSeek 余额与 OpenCode Go 额度。
 
@@ -54,17 +54,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ./verify.ps1 -Tag v1.3.0 -Ch
 
 ## Release and Git
 
-- Release 资产只能包含 `QuotaFloat.exe`；不上传 Debug exe 或任何 PDB。
+- Release 资产只能包含 `QuotaFloat.exe`；不上传 Debug exe 或任何 PDB。分支构建由 `build.yml` 负责，tag 构建与自动发布由 `release.yml` 负责，两者保持独立。
 - 发布前运行 `verify.ps1 -Tag vX.Y.Z -CheckRemote`，确认单文件源码、版本和远程资产。
 - 版本变化需同步 `AssemblyInfo.cs`、release tag 和 README 中的版本说明。
 - commit 与 tag 必须 GPG 签名；使用普通 `git commit`，不要禁用签名。
-- 未明确要求时不要 push、创建 release 或删除远端资产。
+- `v*` tag push 会触发自动 Release；未明确要求时不要 push tag、手工创建 release 或删除远端资产。
 
 ## Verification
 
 - 不截图、不抓屏；使用 Debug 控制台的 `status`、`menu`、`eq`、`policy` 命令和根目录 `regression.ps1`。
 - 不创建深层测试目录，不引入测试框架或额外依赖。
-- 修改布局时重点检查：标题高度、等式 `+`/`=` 宽度、320px 最小宽度、单卡片刷新条 5px 边距。
+- 修改布局时重点检查：标题高度、等式 `+`/`=` 宽度、320px 基础宽度与等式内容驱动的自动加宽、单卡片刷新条 5px 边距。
 - 新增 UI 文案使用 `Strings.cs` 双语属性；新增布局/时间/阈值常量使用 `Metrics.cs` 的命名常量。
 
 ## Behavior constraints
