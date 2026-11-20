@@ -6,7 +6,7 @@
 
 ## 下载
 
-- [最新版本](https://github.com/WZ-Tong/quota-float/releases/latest)（正式版 `QuotaFloat.exe`，调试版 `QuotaFloat.debug.exe`）
+- [最新版本](https://github.com/WZ-Tong/quota-float/releases/latest)（`QuotaFloat.exe`）
 
 ## 功能
 
@@ -82,7 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 仓库内含已编译的 `QuotaFloat.exe`，Releases 中也提供同样的二进制。
 
-每次 GitHub Release 仅提供两个构建文件，来源为同一提交：`QuotaFloat.exe` 为正式版，`QuotaFloat.debug.exe` 为控制台调试版；`.pdb` 仅供本地调试，不作为 Release 资产。
+每次 GitHub Release 仅提供正式版 `QuotaFloat.exe`；`QuotaFloat.debug.exe` 与 `.pdb` 仅作为本地构建产物，不上传。
 
 ## 调试
 
