@@ -28,6 +28,8 @@ try {
     Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("eq")
     Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("policy")
+    Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("dock right")
     Start-Sleep -Milliseconds 300
     $proc.StandardInput.WriteLine("status")
@@ -64,6 +66,7 @@ try {
     $lines = @($out -split "`r?`n" | Where-Object { $_ -like "status *" })
     $menus = @($out -split "`r?`n" | Where-Object { $_ -like "menu *" })
     $equations = @($out -split "`r?`n" | Where-Object { $_ -like "eq *" })
+    $policies = @($out -split "`r?`n" | Where-Object { $_ -like "policy *" })
 
     if ($lines.Count -lt 6) {
         Write-Host $out
@@ -169,6 +172,22 @@ try {
     if ([int]$Matches[2] -lt $symbolMin) {
         Write-Host $out
         throw "Equation equals symbol width is too small: $($equations[0])"
+    }
+    if ($policies.Count -lt 1) {
+        Write-Host $out
+        throw "Refresh policy snapshot is missing."
+    }
+    $expectedPolicy = @{ v0 = 120; v1 = 30; v2 = 60; v3 = 120; v4 = 120;
+                         h0 = 600; h1 = 30; h2 = 60; h3 = 120; h4 = 240 }
+    foreach ($key in $expectedPolicy.Keys) {
+        if ($policies[0] -notmatch ($key + '=(\d+)')) {
+            Write-Host $out
+            throw "Refresh policy field missing: $key"
+        }
+        if ([int]$Matches[1] -ne $expectedPolicy[$key]) {
+            Write-Host $out
+            throw "Refresh policy mismatch: $key=$($Matches[1]) expected=$($expectedPolicy[$key])"
+        }
     }
 
     Write-Host "PASS"

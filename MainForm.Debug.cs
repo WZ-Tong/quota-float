@@ -46,6 +46,22 @@ namespace QuotaFloat
                 UiMetrics.EquationSymbolInitialWidth);
         }
 
+        internal string DebugRefreshPolicy()
+        {
+            return string.Format(CultureInfo.InvariantCulture,
+                "v0={0} v1={1} v2={2} v3={3} v4={4} h0={5} h1={6} h2={7} h3={8} h4={9}",
+                RefreshPolicy.EffectiveSeconds(Timing.VisibleRefreshSeconds, 0),
+                RefreshPolicy.EffectiveSeconds(Timing.VisibleRefreshSeconds, 1),
+                RefreshPolicy.EffectiveSeconds(Timing.VisibleRefreshSeconds, 2),
+                RefreshPolicy.EffectiveSeconds(Timing.VisibleRefreshSeconds, 3),
+                RefreshPolicy.EffectiveSeconds(Timing.VisibleRefreshSeconds, 4),
+                RefreshPolicy.EffectiveSeconds(Timing.HiddenRefreshSeconds, 0),
+                RefreshPolicy.EffectiveSeconds(Timing.HiddenRefreshSeconds, 1),
+                RefreshPolicy.EffectiveSeconds(Timing.HiddenRefreshSeconds, 2),
+                RefreshPolicy.EffectiveSeconds(Timing.HiddenRefreshSeconds, 3),
+                RefreshPolicy.EffectiveSeconds(Timing.HiddenRefreshSeconds, 4));
+        }
+
         internal void DebugShow()
         {
             if (dockedEdge == EdgeMetrics.DockNone) return;

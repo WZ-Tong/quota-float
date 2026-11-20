@@ -18,125 +18,7 @@ namespace QuotaFloat
 {
     internal sealed partial class MainForm
     {
-        // ---------- 数据获取 ----------
-        private int CurrentRefreshSeconds()
-        {
-            return edgeHidden ? Timing.HiddenRefreshSeconds : Timing.VisibleRefreshSeconds;
-        }
-
-        private double SecondsSince(long stamp)
-        {
-            if (stamp == Timing.NoStamp) return double.MaxValue;
-            return ElapsedSeconds(stamp);
-        }
-
-        private double ElapsedSeconds(long stamp)
-        {
-            if (stamp == Timing.NoStamp) return 0.0;
-            return (clock.ElapsedTicks - stamp) / (double)Stopwatch.Frequency;
-        }
-
-        private double ElapsedMilliseconds(long stamp)
-        {
-            return ElapsedSeconds(stamp) * Timing.MillisecondsPerSecond;
-        }
-
-        private double OldestFetchAgeSeconds()
-        {
-            double age = -1.0;
-            if (lastDeepSeekFetchStamp != Timing.NoStamp)
-                age = SecondsSince(lastDeepSeekFetchStamp);
-            if (lastOpenCodeFetchStamp != Timing.NoStamp)
-            {
-                double goAge = SecondsSince(lastOpenCodeFetchStamp);
-                if (age < 0.0 || goAge > age) age = goAge;
-            }
-            return age;
-        }
-
-        private float NextRefreshFraction()
-        {
-            float fraction = 1f;
-            bool any = false;
-            if (cfg.DeepSeekKey.Length > 0)
-            {
-                fraction = Math.Min(fraction, RemainingFraction(lastDeepSeekFetchStamp,
-                    EffectiveFetchSeconds(deepSeekFailureCount)));
-                any = true;
-            }
-            if (cfg.OpenCodeKey.Length > 0)
-            {
-                fraction = Math.Min(fraction, RemainingFraction(lastOpenCodeFetchStamp,
-                    EffectiveFetchSeconds(openCodeFailureCount)));
-                any = true;
-            }
-            return any ? fraction : 1f;
-        }
-
-        private float RemainingFraction(long stamp, int interval)
-        {
-            if (stamp == Timing.NoStamp) return 0f;
-            double remaining = 1.0 - SecondsSince(stamp) / interval;
-            return (float)Math.Max(0.0, Math.Min(1.0, remaining));
-        }
-
-        private int EffectiveFetchSeconds(int failureCount)
-        {
-            int normal = CurrentRefreshSeconds();
-            if (failureCount <= 0) return normal;
-            int shift = Math.Min(failureCount - 1, Timing.RetryShiftLimit);
-            int retry = Timing.RetryBaseSeconds << shift;
-            return Math.Min(normal, Math.Max(Timing.RetryBaseSeconds, retry));
-        }
-
-        private static long ToUtcTicks(DateTimeOffset? value)
-        {
-            return value.HasValue ? value.Value.UtcDateTime.Ticks : 0;
-        }
-
-        private static DateTimeOffset? FromUtcTicks(long ticks)
-        {
-            if (ticks <= 0) return null;
-            return new DateTimeOffset(new DateTime(ticks, DateTimeKind.Utc));
-        }
-
-        private static DateTime? LocalTimeFromUtcTicks(long ticks)
-        {
-            if (ticks <= 0) return null;
-            return new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
-        }
-
-        private void StartDueFetches()
-        {
-            if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
-                SecondsSince(lastDeepSeekFetchStamp) >= EffectiveFetchSeconds(deepSeekFailureCount))
-                StartDeepSeekFetch();
-            if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
-                SecondsSince(lastOpenCodeFetchStamp) >= EffectiveFetchSeconds(openCodeFailureCount))
-                StartOpenCodeFetch();
-        }
-
-        private void RefreshIfStaleOnReveal()
-        {
-            if (demoMode || refreshingPaused) return;
-            int dsAge = Math.Min(Timing.RevealRefreshMinAgeSeconds,
-                EffectiveFetchSeconds(deepSeekFailureCount));
-            int goAge = Math.Min(Timing.RevealRefreshMinAgeSeconds,
-                EffectiveFetchSeconds(openCodeFailureCount));
-            if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
-                SecondsSince(lastDeepSeekFetchStamp) >= dsAge)
-                StartDeepSeekFetch();
-            if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
-                SecondsSince(lastOpenCodeFetchStamp) >= goAge)
-                StartOpenCodeFetch();
-        }
-
-        private void StartFetch()
-        {
-            StartDeepSeekFetch();
-            StartOpenCodeFetch();
-        }
-
+        // ---------- 数据获取与解析 ----------
         private void StartDeepSeekFetch()
         {
             if (fetchingDeepSeek) return;
@@ -376,108 +258,11 @@ namespace QuotaFloat
             if (edgeHidden || hintAlpha > 0f) Invalidate();
         }
 
-        private void RestoreOpenCodeCache()
-        {
-            if (!cfg.OpenCodeCacheKnown || cfg.OpenCodeKey.Length == 0) return;
-            openCodeLastSuccess = LocalTimeFromUtcTicks(cfg.OpenCodeCacheUtcTicks);
-            ApplyCachedOpenCodeRows(CachedOpenCodeState());
-        }
-
-        private void ApplyCachedOpenCodeRows(GoState cached)
-        {
-            ApplyRow(row5h, cached, cached.Rolling, true);
-            ApplyRow(rowWeek, cached, cached.Weekly, true);
-            ApplyRow(rowMonth, cached, cached.Monthly, true);
-        }
-
-        private GoState CachedOpenCodeState()
-        {
-            GoState go = new GoState { Configured = true, Ok = true };
-            go.Rolling = CachedWindow(
-                cfg.OpenCodeRollingUsed,
-                cfg.OpenCodeRollingHasData,
-                cfg.OpenCodeRollingRateLimited,
-                cfg.OpenCodeRollingResetsUtcTicks);
-            go.Weekly = CachedWindow(
-                cfg.OpenCodeWeeklyUsed,
-                cfg.OpenCodeWeeklyHasData,
-                cfg.OpenCodeWeeklyRateLimited,
-                cfg.OpenCodeWeeklyResetsUtcTicks);
-            go.Monthly = CachedWindow(
-                cfg.OpenCodeMonthlyUsed,
-                cfg.OpenCodeMonthlyHasData,
-                cfg.OpenCodeMonthlyRateLimited,
-                cfg.OpenCodeMonthlyResetsUtcTicks);
-            return go;
-        }
-
-        private static GoWindow CachedWindow(int used, bool hasData, bool rateLimited, long resetsUtcTicks)
-        {
-            GoWindow window = new GoWindow();
-            window.Used = used;
-            window.HasData = hasData;
-            window.RateLimited = rateLimited;
-            window.ResetsAt = FromUtcTicks(resetsUtcTicks);
-            return window;
-        }
-
-        private void CacheOpenCode(GoState go)
-        {
-            cfg.OpenCodeCacheKnown = true;
-            cfg.OpenCodeCacheUtcTicks = DateTime.UtcNow.Ticks;
-            cfg.OpenCodeRollingUsed = go.Rolling.Used;
-            cfg.OpenCodeRollingHasData = go.Rolling.HasData;
-            cfg.OpenCodeRollingRateLimited = go.Rolling.RateLimited;
-            cfg.OpenCodeRollingResetsUtcTicks = ToUtcTicks(go.Rolling.ResetsAt);
-            cfg.OpenCodeWeeklyUsed = go.Weekly.Used;
-            cfg.OpenCodeWeeklyHasData = go.Weekly.HasData;
-            cfg.OpenCodeWeeklyRateLimited = go.Weekly.RateLimited;
-            cfg.OpenCodeWeeklyResetsUtcTicks = ToUtcTicks(go.Weekly.ResetsAt);
-            cfg.OpenCodeMonthlyUsed = go.Monthly.Used;
-            cfg.OpenCodeMonthlyHasData = go.Monthly.HasData;
-            cfg.OpenCodeMonthlyRateLimited = go.Monthly.RateLimited;
-            cfg.OpenCodeMonthlyResetsUtcTicks = ToUtcTicks(go.Monthly.ResetsAt);
-            cfg.Save();
-        }
-
-        private void ClearOpenCodeRows()
-        {
-            bool configured = cfg.OpenCodeKey.Length > 0;
-            ResetRow(row5h, configured);
-            ResetRow(rowWeek, configured);
-            ResetRow(rowMonth, configured);
-        }
-
-        private void ResetRow(UsageRow row, bool configured)
-        {
-            row.Configured = configured;
-            row.Error = "";
-            row.RateLimited = false;
-            row.Stale = false;
-            row.ResetsAt = null;
-            row.SetAnimatedRemaining(-1, clock.ElapsedMilliseconds, false);
-            row.Invalidate();
-        }
-
         private static string CurrencySymbol(string currency)
         {
             if (currency == "CNY") return "¥";
             if (currency == "USD") return "$";
             return string.IsNullOrEmpty(currency) ? "" : currency + " ";
-        }
-
-        private void ApplyRow(UsageRow row, GoState go, GoWindow w, bool stale)
-        {
-            row.Configured = go.Configured;
-            row.Error = go.Ok ? "" : go.Error;
-            row.RateLimited = go.Ok && w.RateLimited;
-            row.Stale = stale;
-            row.ResetsAt = go.Ok ? w.ResetsAt : null;
-            int remaining = go.Ok && w.HasData && !w.RateLimited
-                ? Math.Max(0, UiMetrics.PercentMax - w.Used) : -1;
-            if (go.Ok && w.RateLimited) remaining = 0;
-            row.SetAnimatedRemaining(remaining, clock.ElapsedMilliseconds, !edgeHidden);
-            row.Invalidate();
         }
 
         private static DeepSeekState FetchDeepSeek(string key)
@@ -673,5 +458,6 @@ namespace QuotaFloat
             try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); }
             catch { return 0; }
         }
+
     }
 }

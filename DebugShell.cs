@@ -21,7 +21,7 @@ namespace QuotaFloat
             catch { }
 
             Console.WriteLine("debug-ready");
-            Console.WriteLine("commands: status, menu, eq, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
+            Console.WriteLine("commands: status, menu, eq, policy, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
 
             while (true)
             {
@@ -40,7 +40,7 @@ namespace QuotaFloat
                 }
                 if (command == "help")
                 {
-                    Console.WriteLine("commands: status, menu, eq, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
+                    Console.WriteLine("commands: status, menu, eq, policy, show, hide, dock left|right|top|bottom, move X Y, top on|off, lang en|zh, quit");
                     continue;
                 }
                 if (command == "status")
@@ -56,6 +56,12 @@ namespace QuotaFloat
                 if (command == "eq")
                 {
                     Run(form, delegate { Console.WriteLine("eq " + form.DebugEquation()); });
+                    continue;
+                }
+
+                if (command == "policy")
+                {
+                    Run(form, delegate { Console.WriteLine("policy " + form.DebugRefreshPolicy()); });
                     continue;
                 }
                 if (command == "show")
