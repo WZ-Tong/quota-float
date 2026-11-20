@@ -1,0 +1,20 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Release
+        shell: powershell
+        run: .\build.ps1
+      - name: Build Debug
+        shell: powershell
+        run: .\build.ps1 -Configuration Debug
+      - name: Verify source and versions
+        shell: powershell
+        run: .\verify.ps1

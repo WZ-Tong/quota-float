@@ -121,6 +121,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\regression.ps1
 
 脚本会构建 Debug 版本到临时目录，使用 `--demo` 启动，通过调试控制台验证贴边、隐藏、恢复、刷新间隔、显示器刷新率检测与截图排除状态，并检查中英文切换；不读取真实配置，也不依赖截图。
 
+## 发布前检查
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Tag v1.3.0 -CheckRemote
+```
+
+`verify.ps1` 会重新导出并检查 `QuotaFloat.single.cs` 是否已提交、程序集版本与 Release 二进制是否一致；带 `-Tag` 时校验 tag 与版本，带 `-CheckRemote` 时确认远端 Release 只包含 `QuotaFloat.exe`。仓库根目录的 `AGENTS.md` 记录了维护与发布约束；`.github/workflows/verify.yml` 在 Windows 上执行 Release/Debug 构建及上述源码/版本检查。
+
 ## 配置与隐私
 
 - 配置文件：`%APPDATA%\QuotaFloat\config.json`
