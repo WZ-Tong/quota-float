@@ -194,10 +194,10 @@ namespace QuotaFloat
         public const int HorizontalShortSegments = 5;
         public const int HorizontalLongSegments = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int ParentDotAlpha = 190;
-        public const int ParentDotDiameter = 2;
-        public const int TenPercentDotAlpha = 130;
-        public const int TenPercentDotDiameter = 2;
+        public const int ParentDotAlpha = 220;
+        public const int ParentDotDiameter = 3;
+        public const int TenPercentDotAlpha = 150;
+        public const int TenPercentDotDiameter = 1;
         public const int TenPercentStep = 10;
         public const int HorizontalLongGrid = 5;
         public const int HorizontalShortGrid = 10;

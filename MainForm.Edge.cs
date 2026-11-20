@@ -402,8 +402,8 @@ namespace QuotaFloat
             int subAlpha = (int)Math.Round(EdgeMetrics.SubTickAlpha * hintAlpha);
             int dotAlpha = (int)Math.Round(EdgeMetrics.ParentDotAlpha * hintAlpha);
             int tenAlpha = (int)Math.Round(EdgeMetrics.TenPercentDotAlpha * hintAlpha);
-            Color dotColor = Color.FromArgb(dotAlpha, lightTheme ? Color.Black : Color.White);
-            Color tenColor = Color.FromArgb(tenAlpha, lightTheme ? Color.Black : Color.White);
+            Color dotColor = Color.FromArgb(dotAlpha, Color.White);
+            Color tenColor = Color.FromArgb(tenAlpha, Color.White);
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))

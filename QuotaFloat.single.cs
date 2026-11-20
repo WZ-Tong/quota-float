@@ -2441,8 +2441,8 @@ namespace QuotaFloat
             int subAlpha = (int)Math.Round(EdgeMetrics.SubTickAlpha * hintAlpha);
             int dotAlpha = (int)Math.Round(EdgeMetrics.ParentDotAlpha * hintAlpha);
             int tenAlpha = (int)Math.Round(EdgeMetrics.TenPercentDotAlpha * hintAlpha);
-            Color dotColor = Color.FromArgb(dotAlpha, lightTheme ? Color.Black : Color.White);
-            Color tenColor = Color.FromArgb(tenAlpha, lightTheme ? Color.Black : Color.White);
+            Color dotColor = Color.FromArgb(dotAlpha, Color.White);
+            Color tenColor = Color.FromArgb(tenAlpha, Color.White);
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
@@ -4179,10 +4179,10 @@ namespace QuotaFloat
         public const int HorizontalShortSegments = 5;
         public const int HorizontalLongSegments = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int ParentDotAlpha = 190;
-        public const int ParentDotDiameter = 2;
-        public const int TenPercentDotAlpha = 130;
-        public const int TenPercentDotDiameter = 2;
+        public const int ParentDotAlpha = 220;
+        public const int ParentDotDiameter = 3;
+        public const int TenPercentDotAlpha = 150;
+        public const int TenPercentDotDiameter = 1;
         public const int TenPercentStep = 10;
         public const int HorizontalLongGrid = 5;
         public const int HorizontalShortGrid = 10;
