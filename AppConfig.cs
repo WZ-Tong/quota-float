@@ -44,6 +44,21 @@ namespace QuotaFloat
         public string DeepSeekCurrency = "CNY";
         public string Language = "";
         public bool DeepSeekBalanceKnown;
+        public long DeepSeekCacheUtcTicks;
+        public bool OpenCodeCacheKnown;
+        public long OpenCodeCacheUtcTicks;
+        public int OpenCodeRollingUsed;
+        public bool OpenCodeRollingHasData;
+        public bool OpenCodeRollingRateLimited;
+        public long OpenCodeRollingResetsUtcTicks;
+        public int OpenCodeWeeklyUsed;
+        public bool OpenCodeWeeklyHasData;
+        public bool OpenCodeWeeklyRateLimited;
+        public long OpenCodeWeeklyResetsUtcTicks;
+        public int OpenCodeMonthlyUsed;
+        public bool OpenCodeMonthlyHasData;
+        public bool OpenCodeMonthlyRateLimited;
+        public long OpenCodeMonthlyResetsUtcTicks;
         public int X = UnsetCoordinate;
         public int Y = UnsetCoordinate;
         public bool TopMost = true;
@@ -97,6 +112,21 @@ namespace QuotaFloat
                 if (string.IsNullOrEmpty(c.DeepSeekCurrency)) c.DeepSeekCurrency = "CNY";
                 c.Language = GetStr(d, "language");
                 c.DeepSeekBalanceKnown = GetBool(d, "deepseekBalanceKnown", false);
+                c.DeepSeekCacheUtcTicks = GetLong(d, "deepseekCacheUtcTicks", 0);
+                c.OpenCodeCacheKnown = GetBool(d, "opencodeCacheKnown", false);
+                c.OpenCodeCacheUtcTicks = GetLong(d, "opencodeCacheUtcTicks", 0);
+                c.OpenCodeRollingUsed = GetInt(d, "opencodeRollingUsed", 0);
+                c.OpenCodeRollingHasData = GetBool(d, "opencodeRollingHasData", false);
+                c.OpenCodeRollingRateLimited = GetBool(d, "opencodeRollingRateLimited", false);
+                c.OpenCodeRollingResetsUtcTicks = GetLong(d, "opencodeRollingResetsUtcTicks", 0);
+                c.OpenCodeWeeklyUsed = GetInt(d, "opencodeWeeklyUsed", 0);
+                c.OpenCodeWeeklyHasData = GetBool(d, "opencodeWeeklyHasData", false);
+                c.OpenCodeWeeklyRateLimited = GetBool(d, "opencodeWeeklyRateLimited", false);
+                c.OpenCodeWeeklyResetsUtcTicks = GetLong(d, "opencodeWeeklyResetsUtcTicks", 0);
+                c.OpenCodeMonthlyUsed = GetInt(d, "opencodeMonthlyUsed", 0);
+                c.OpenCodeMonthlyHasData = GetBool(d, "opencodeMonthlyHasData", false);
+                c.OpenCodeMonthlyRateLimited = GetBool(d, "opencodeMonthlyRateLimited", false);
+                c.OpenCodeMonthlyResetsUtcTicks = GetLong(d, "opencodeMonthlyResetsUtcTicks", 0);
                 c.X = GetInt(d, "x", UnsetCoordinate);
                 c.Y = GetInt(d, "y", UnsetCoordinate);
                 c.TopMost = GetBool(d, "topMost", true);
@@ -130,6 +160,21 @@ namespace QuotaFloat
                 d["deepseekCurrency"] = DeepSeekCurrency;
                 d["language"] = Language;
                 d["deepseekBalanceKnown"] = DeepSeekBalanceKnown;
+                d["deepseekCacheUtcTicks"] = DeepSeekCacheUtcTicks;
+                d["opencodeCacheKnown"] = OpenCodeCacheKnown;
+                d["opencodeCacheUtcTicks"] = OpenCodeCacheUtcTicks;
+                d["opencodeRollingUsed"] = OpenCodeRollingUsed;
+                d["opencodeRollingHasData"] = OpenCodeRollingHasData;
+                d["opencodeRollingRateLimited"] = OpenCodeRollingRateLimited;
+                d["opencodeRollingResetsUtcTicks"] = OpenCodeRollingResetsUtcTicks;
+                d["opencodeWeeklyUsed"] = OpenCodeWeeklyUsed;
+                d["opencodeWeeklyHasData"] = OpenCodeWeeklyHasData;
+                d["opencodeWeeklyRateLimited"] = OpenCodeWeeklyRateLimited;
+                d["opencodeWeeklyResetsUtcTicks"] = OpenCodeWeeklyResetsUtcTicks;
+                d["opencodeMonthlyUsed"] = OpenCodeMonthlyUsed;
+                d["opencodeMonthlyHasData"] = OpenCodeMonthlyHasData;
+                d["opencodeMonthlyRateLimited"] = OpenCodeMonthlyRateLimited;
+                d["opencodeMonthlyResetsUtcTicks"] = OpenCodeMonthlyResetsUtcTicks;
                 d["x"] = X;
                 d["y"] = Y;
                 d["topMost"] = TopMost;
@@ -139,6 +184,24 @@ namespace QuotaFloat
                     new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }
+        }
+
+        public void ClearOpenCodeCache()
+        {
+            OpenCodeCacheKnown = false;
+            OpenCodeCacheUtcTicks = 0;
+            OpenCodeRollingUsed = 0;
+            OpenCodeRollingHasData = false;
+            OpenCodeRollingRateLimited = false;
+            OpenCodeRollingResetsUtcTicks = 0;
+            OpenCodeWeeklyUsed = 0;
+            OpenCodeWeeklyHasData = false;
+            OpenCodeWeeklyRateLimited = false;
+            OpenCodeWeeklyResetsUtcTicks = 0;
+            OpenCodeMonthlyUsed = 0;
+            OpenCodeMonthlyHasData = false;
+            OpenCodeMonthlyRateLimited = false;
+            OpenCodeMonthlyResetsUtcTicks = 0;
         }
 
         private static string Protect(string s)
@@ -190,6 +253,14 @@ namespace QuotaFloat
             object v;
             if (!d.TryGetValue(k, out v) || v == null) return def;
             try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); }
+            catch { return def; }
+        }
+
+        private static long GetLong(Dictionary<string, object> d, string k, long def)
+        {
+            object v;
+            if (!d.TryGetValue(k, out v) || v == null) return def;
+            try { return Convert.ToInt64(v, CultureInfo.InvariantCulture); }
             catch { return def; }
         }
 

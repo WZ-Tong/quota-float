@@ -60,6 +60,7 @@ if ([string]::IsNullOrWhiteSpace($Output)) {
 }
 
 $singleName = "QuotaFloat.single.cs"
+$assemblyName = "AssemblyInfo.cs"
 $singleSource = Join-Path $root $singleName
 $sourceFiles = @(
     Get-ChildItem -LiteralPath $root -Filter "*.cs" -File -Recurse |
@@ -70,6 +71,7 @@ $sourceFiles = @(
 if ($sourceFiles.Count -eq 0) { throw "No .cs source files found." }
 
 $sections = New-Object 'System.Collections.Generic.List[string]'
+$assemblyContent = ""
 foreach ($file in $sourceFiles) {
     $text = [System.IO.File]::ReadAllText($file.FullName, [System.Text.Encoding]::UTF8)
     $fileUsings = New-Object 'System.Collections.Generic.List[string]'
@@ -83,6 +85,10 @@ foreach ($file in $sourceFiles) {
         [void]$body.AppendLine($line.TrimEnd())
     }
     $content = $body.ToString().Trim()
+    if ($content.Length -gt 0 -and $file.Name -eq $assemblyName) {
+        $assemblyContent = $content
+        continue
+    }
     if ($content.Length -gt 0) {
         if ($fileUsings.Count -gt 0) {
             $namespaceIndex = $content.IndexOf("namespace QuotaFloat")
@@ -109,6 +115,11 @@ $builder = New-Object System.Text.StringBuilder
 [void]$builder.AppendLine("// Edit the split sources, not this file.")
 [void]$builder.AppendLine("// </auto-generated>")
 [void]$builder.AppendLine()
+if ($assemblyContent.Length -gt 0) {
+    [void]$builder.AppendLine("// ---- source: AssemblyInfo.cs ----")
+    [void]$builder.AppendLine($assemblyContent)
+    [void]$builder.AppendLine()
+}
 foreach ($section in $sections) {
     [void]$builder.AppendLine($section)
 }

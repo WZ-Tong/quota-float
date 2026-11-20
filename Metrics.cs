@@ -143,6 +143,8 @@ namespace QuotaFloat
         public const int VisibleRefreshSeconds = 120;
         public const int HiddenRefreshSeconds = 600;
         public const int RevealRefreshMinAgeSeconds = 45;
+        public const int RetryBaseSeconds = 30;
+        public const int RetryShiftLimit = 8;
 
         public const int UiTickMilliseconds = 1000;
         public const int EdgeTickMilliseconds = 120;

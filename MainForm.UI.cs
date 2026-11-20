@@ -346,13 +346,12 @@ namespace QuotaFloat
             tips.SetToolTip(dsBar, Strings.DeepSeekBarTip);
             tips.SetToolTip(refreshBar, Strings.RefreshBarTip);
             tips.SetToolTip(inlineEditor, Strings.InlineEditorTip);
-            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
             tips.SetToolTip(goCard, Strings.OpenCodeCardTip);
             tips.SetToolTip(goTitle, Strings.OpenCodeTitleTip);
             tips.SetToolTip(row5h, Strings.FiveHoursTip);
             tips.SetToolTip(rowWeek, Strings.WeekTip);
             tips.SetToolTip(rowMonth, Strings.MonthTip);
-            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
+            UpdateFetchTooltips();
         }
 
         private void SetLanguage(string code)

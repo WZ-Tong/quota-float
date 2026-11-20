@@ -3,6 +3,15 @@
 // Edit the split sources, not this file.
 // </auto-generated>
 
+// ---- source: AssemblyInfo.cs ----
+[assembly: System.Reflection.AssemblyTitle("QuotaFloat")]
+[assembly: System.Reflection.AssemblyDescription("DeepSeek and OpenCode quota widget")]
+[assembly: System.Reflection.AssemblyProduct("QuotaFloat")]
+[assembly: System.Reflection.AssemblyCompany("WZ-Tong")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("1.3.0")]
+
 // ---- source: AppConfig.cs ----
 namespace QuotaFloat
 {
@@ -49,6 +58,21 @@ namespace QuotaFloat
         public string DeepSeekCurrency = "CNY";
         public string Language = "";
         public bool DeepSeekBalanceKnown;
+        public long DeepSeekCacheUtcTicks;
+        public bool OpenCodeCacheKnown;
+        public long OpenCodeCacheUtcTicks;
+        public int OpenCodeRollingUsed;
+        public bool OpenCodeRollingHasData;
+        public bool OpenCodeRollingRateLimited;
+        public long OpenCodeRollingResetsUtcTicks;
+        public int OpenCodeWeeklyUsed;
+        public bool OpenCodeWeeklyHasData;
+        public bool OpenCodeWeeklyRateLimited;
+        public long OpenCodeWeeklyResetsUtcTicks;
+        public int OpenCodeMonthlyUsed;
+        public bool OpenCodeMonthlyHasData;
+        public bool OpenCodeMonthlyRateLimited;
+        public long OpenCodeMonthlyResetsUtcTicks;
         public int X = UnsetCoordinate;
         public int Y = UnsetCoordinate;
         public bool TopMost = true;
@@ -102,6 +126,21 @@ namespace QuotaFloat
                 if (string.IsNullOrEmpty(c.DeepSeekCurrency)) c.DeepSeekCurrency = "CNY";
                 c.Language = GetStr(d, "language");
                 c.DeepSeekBalanceKnown = GetBool(d, "deepseekBalanceKnown", false);
+                c.DeepSeekCacheUtcTicks = GetLong(d, "deepseekCacheUtcTicks", 0);
+                c.OpenCodeCacheKnown = GetBool(d, "opencodeCacheKnown", false);
+                c.OpenCodeCacheUtcTicks = GetLong(d, "opencodeCacheUtcTicks", 0);
+                c.OpenCodeRollingUsed = GetInt(d, "opencodeRollingUsed", 0);
+                c.OpenCodeRollingHasData = GetBool(d, "opencodeRollingHasData", false);
+                c.OpenCodeRollingRateLimited = GetBool(d, "opencodeRollingRateLimited", false);
+                c.OpenCodeRollingResetsUtcTicks = GetLong(d, "opencodeRollingResetsUtcTicks", 0);
+                c.OpenCodeWeeklyUsed = GetInt(d, "opencodeWeeklyUsed", 0);
+                c.OpenCodeWeeklyHasData = GetBool(d, "opencodeWeeklyHasData", false);
+                c.OpenCodeWeeklyRateLimited = GetBool(d, "opencodeWeeklyRateLimited", false);
+                c.OpenCodeWeeklyResetsUtcTicks = GetLong(d, "opencodeWeeklyResetsUtcTicks", 0);
+                c.OpenCodeMonthlyUsed = GetInt(d, "opencodeMonthlyUsed", 0);
+                c.OpenCodeMonthlyHasData = GetBool(d, "opencodeMonthlyHasData", false);
+                c.OpenCodeMonthlyRateLimited = GetBool(d, "opencodeMonthlyRateLimited", false);
+                c.OpenCodeMonthlyResetsUtcTicks = GetLong(d, "opencodeMonthlyResetsUtcTicks", 0);
                 c.X = GetInt(d, "x", UnsetCoordinate);
                 c.Y = GetInt(d, "y", UnsetCoordinate);
                 c.TopMost = GetBool(d, "topMost", true);
@@ -135,6 +174,21 @@ namespace QuotaFloat
                 d["deepseekCurrency"] = DeepSeekCurrency;
                 d["language"] = Language;
                 d["deepseekBalanceKnown"] = DeepSeekBalanceKnown;
+                d["deepseekCacheUtcTicks"] = DeepSeekCacheUtcTicks;
+                d["opencodeCacheKnown"] = OpenCodeCacheKnown;
+                d["opencodeCacheUtcTicks"] = OpenCodeCacheUtcTicks;
+                d["opencodeRollingUsed"] = OpenCodeRollingUsed;
+                d["opencodeRollingHasData"] = OpenCodeRollingHasData;
+                d["opencodeRollingRateLimited"] = OpenCodeRollingRateLimited;
+                d["opencodeRollingResetsUtcTicks"] = OpenCodeRollingResetsUtcTicks;
+                d["opencodeWeeklyUsed"] = OpenCodeWeeklyUsed;
+                d["opencodeWeeklyHasData"] = OpenCodeWeeklyHasData;
+                d["opencodeWeeklyRateLimited"] = OpenCodeWeeklyRateLimited;
+                d["opencodeWeeklyResetsUtcTicks"] = OpenCodeWeeklyResetsUtcTicks;
+                d["opencodeMonthlyUsed"] = OpenCodeMonthlyUsed;
+                d["opencodeMonthlyHasData"] = OpenCodeMonthlyHasData;
+                d["opencodeMonthlyRateLimited"] = OpenCodeMonthlyRateLimited;
+                d["opencodeMonthlyResetsUtcTicks"] = OpenCodeMonthlyResetsUtcTicks;
                 d["x"] = X;
                 d["y"] = Y;
                 d["topMost"] = TopMost;
@@ -144,6 +198,24 @@ namespace QuotaFloat
                     new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }
+        }
+
+        public void ClearOpenCodeCache()
+        {
+            OpenCodeCacheKnown = false;
+            OpenCodeCacheUtcTicks = 0;
+            OpenCodeRollingUsed = 0;
+            OpenCodeRollingHasData = false;
+            OpenCodeRollingRateLimited = false;
+            OpenCodeRollingResetsUtcTicks = 0;
+            OpenCodeWeeklyUsed = 0;
+            OpenCodeWeeklyHasData = false;
+            OpenCodeWeeklyRateLimited = false;
+            OpenCodeWeeklyResetsUtcTicks = 0;
+            OpenCodeMonthlyUsed = 0;
+            OpenCodeMonthlyHasData = false;
+            OpenCodeMonthlyRateLimited = false;
+            OpenCodeMonthlyResetsUtcTicks = 0;
         }
 
         private static string Protect(string s)
@@ -195,6 +267,14 @@ namespace QuotaFloat
             object v;
             if (!d.TryGetValue(k, out v) || v == null) return def;
             try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); }
+            catch { return def; }
+        }
+
+        private static long GetLong(Dictionary<string, object> d, string k, long def)
+        {
+            object v;
+            if (!d.TryGetValue(k, out v) || v == null) return def;
+            try { return Convert.ToInt64(v, CultureInfo.InvariantCulture); }
             catch { return def; }
         }
 
@@ -480,6 +560,7 @@ namespace QuotaFloat
         public int Remaining = -1;
         public bool Configured;
         public bool RateLimited;
+        public bool Stale;
         public string Error = "";
         public DateTimeOffset? ResetsAt;
 
@@ -552,6 +633,7 @@ namespace QuotaFloat
             if (Error.Length > 0) return Error;
             if (RateLimited) return Strings.RateLimited(Countdown());
             if (Remaining < 0) return Strings.WaitingData;
+            if (Stale) return Strings.StalePrefix + Countdown();
             return Countdown();
         }
 
@@ -571,7 +653,8 @@ namespace QuotaFloat
                 Palette.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             string suffix = SuffixText();
-            Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red : Palette.Sub;
+            Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red :
+                (Stale && Remaining >= 0 ? Palette.Yellow : Palette.Sub);
             const int suffixLeft = UiMetrics.UsageSuffixLeft;
             int suffixW = w - UiMetrics.UsagePercentWidth - suffixLeft;
             if (suffixW > UiMetrics.UsageSuffixMinWidth)
@@ -955,6 +1038,10 @@ namespace QuotaFloat
         private bool fetchingOpenCode;
         private int deepSeekRequestVersion;
         private int openCodeRequestVersion;
+        private int deepSeekFailureCount;
+        private int openCodeFailureCount;
+        private DateTime? deepSeekLastSuccess;
+        private DateTime? openCodeLastSuccess;
         private long lastDeepSeekFetchStamp = Timing.NoStamp;
         private long lastOpenCodeFetchStamp = Timing.NoStamp;
         private bool placed;
@@ -1164,6 +1251,10 @@ namespace QuotaFloat
             goCard.Controls.Add(row5h);
             goCard.Controls.Add(rowWeek);
             goCard.Controls.Add(rowMonth);
+            bool openCodeConfigured = cfg.OpenCodeKey.Length > 0;
+            row5h.Configured = openCodeConfigured;
+            rowWeek.Configured = openCodeConfigured;
+            rowMonth.Configured = openCodeConfigured;
 
             menu = CreateMenu();
             ContextMenuStrip = menu;
@@ -1200,7 +1291,9 @@ namespace QuotaFloat
                 lastDeepSeekCurrency = string.IsNullOrEmpty(cfg.DeepSeekCurrency) ? "CNY" : cfg.DeepSeekCurrency;
                 lastDeepSeekBalanceKnown = true;
             }
+            deepSeekLastSuccess = LocalTimeFromUtcTicks(cfg.DeepSeekCacheUtcTicks);
             UpdateDisplay();
+            RestoreOpenCodeCache();
             ApplyTooltips();
 
             uiTimer = new Timer();
@@ -1656,17 +1749,18 @@ namespace QuotaFloat
 
         private float NextRefreshFraction()
         {
-            int interval = CurrentRefreshSeconds();
             float fraction = 1f;
             bool any = false;
             if (cfg.DeepSeekKey.Length > 0)
             {
-                fraction = Math.Min(fraction, RemainingFraction(lastDeepSeekFetchStamp, interval));
+                fraction = Math.Min(fraction, RemainingFraction(lastDeepSeekFetchStamp,
+                    EffectiveFetchSeconds(deepSeekFailureCount)));
                 any = true;
             }
             if (cfg.OpenCodeKey.Length > 0)
             {
-                fraction = Math.Min(fraction, RemainingFraction(lastOpenCodeFetchStamp, interval));
+                fraction = Math.Min(fraction, RemainingFraction(lastOpenCodeFetchStamp,
+                    EffectiveFetchSeconds(openCodeFailureCount)));
                 any = true;
             }
             return any ? fraction : 1f;
@@ -1679,25 +1773,54 @@ namespace QuotaFloat
             return (float)Math.Max(0.0, Math.Min(1.0, remaining));
         }
 
+        private int EffectiveFetchSeconds(int failureCount)
+        {
+            int normal = CurrentRefreshSeconds();
+            if (failureCount <= 0) return normal;
+            int shift = Math.Min(failureCount - 1, Timing.RetryShiftLimit);
+            int retry = Timing.RetryBaseSeconds << shift;
+            return Math.Min(normal, Math.Max(Timing.RetryBaseSeconds, retry));
+        }
+
+        private static long ToUtcTicks(DateTimeOffset? value)
+        {
+            return value.HasValue ? value.Value.UtcDateTime.Ticks : 0;
+        }
+
+        private static DateTimeOffset? FromUtcTicks(long ticks)
+        {
+            if (ticks <= 0) return null;
+            return new DateTimeOffset(new DateTime(ticks, DateTimeKind.Utc));
+        }
+
+        private static DateTime? LocalTimeFromUtcTicks(long ticks)
+        {
+            if (ticks <= 0) return null;
+            return new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
+        }
+
         private void StartDueFetches()
         {
-            int interval = CurrentRefreshSeconds();
             if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
-                SecondsSince(lastDeepSeekFetchStamp) >= interval)
+                SecondsSince(lastDeepSeekFetchStamp) >= EffectiveFetchSeconds(deepSeekFailureCount))
                 StartDeepSeekFetch();
             if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
-                SecondsSince(lastOpenCodeFetchStamp) >= interval)
+                SecondsSince(lastOpenCodeFetchStamp) >= EffectiveFetchSeconds(openCodeFailureCount))
                 StartOpenCodeFetch();
         }
 
         private void RefreshIfStaleOnReveal()
         {
             if (demoMode || refreshingPaused) return;
+            int dsAge = Math.Min(Timing.RevealRefreshMinAgeSeconds,
+                EffectiveFetchSeconds(deepSeekFailureCount));
+            int goAge = Math.Min(Timing.RevealRefreshMinAgeSeconds,
+                EffectiveFetchSeconds(openCodeFailureCount));
             if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
-                SecondsSince(lastDeepSeekFetchStamp) >= Timing.RevealRefreshMinAgeSeconds)
+                SecondsSince(lastDeepSeekFetchStamp) >= dsAge)
                 StartDeepSeekFetch();
             if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
-                SecondsSince(lastOpenCodeFetchStamp) >= Timing.RevealRefreshMinAgeSeconds)
+                SecondsSince(lastOpenCodeFetchStamp) >= goAge)
                 StartOpenCodeFetch();
         }
 
@@ -1794,17 +1917,21 @@ namespace QuotaFloat
         private void InvalidateDeepSeekFetch()
         {
             deepSeekRequestVersion++;
+            deepSeekFailureCount = 0;
             fetchingDeepSeek = false;
             dsRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
             UpdateFetchUi();
+            UpdateFetchTooltips();
         }
 
         private void InvalidateOpenCodeFetch()
         {
             openCodeRequestVersion++;
+            openCodeFailureCount = 0;
             fetchingOpenCode = false;
             goRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
             UpdateFetchUi();
+            UpdateFetchTooltips();
         }
 
         private void UpdateFetchUi()
@@ -1819,6 +1946,22 @@ namespace QuotaFloat
             refreshBar.Invalidate();
         }
 
+        private void UpdateFetchTooltips()
+        {
+            tips.SetToolTip(dsRefreshButton,
+                FetchTooltip(Strings.RefreshDeepSeekTip, deepSeekLastSuccess, deepSeekFailureCount));
+            tips.SetToolTip(goRefreshButton,
+                FetchTooltip(Strings.RefreshOpenCodeTip, openCodeLastSuccess, openCodeFailureCount));
+        }
+
+        private static string FetchTooltip(string baseText, DateTime? lastSuccess, int failures)
+        {
+            string text = baseText + Environment.NewLine + Strings.LastSuccess(lastSuccess);
+            if (failures > 0)
+                text += Environment.NewLine + Strings.ConsecutiveFailures(failures);
+            return text;
+        }
+
         private void ApplyDeepSeek(DeepSeekState ds)
         {
             if (IsDisposed) return;
@@ -1826,6 +1969,16 @@ namespace QuotaFloat
             lastDeepSeekFetchStamp = clock.ElapsedTicks;
             dsRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
             UpdateFetchUi();
+            if (!ds.Configured)
+                deepSeekFailureCount = 0;
+            else if (!ds.Ok)
+                deepSeekFailureCount++;
+            else
+            {
+                deepSeekFailureCount = 0;
+                deepSeekLastSuccess = DateTime.Now;
+                cfg.DeepSeekCacheUtcTicks = DateTime.UtcNow.Ticks;
+            }
 
             if (!ds.Configured)
             {
@@ -1868,6 +2021,7 @@ namespace QuotaFloat
                 }
             }
 
+            UpdateFetchTooltips();
             if (edgeHidden || hintAlpha > 0f) Invalidate();
         }
 
@@ -1879,10 +2033,123 @@ namespace QuotaFloat
             goRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
             UpdateFetchUi();
 
-            ApplyRow(row5h, go, go.Rolling);
-            ApplyRow(rowWeek, go, go.Weekly);
-            ApplyRow(rowMonth, go, go.Monthly);
+            if (!go.Configured)
+            {
+                openCodeFailureCount = 0;
+                ApplyRow(row5h, go, go.Rolling, false);
+                ApplyRow(rowWeek, go, go.Weekly, false);
+                ApplyRow(rowMonth, go, go.Monthly, false);
+            }
+            else if (!go.Ok)
+            {
+                openCodeFailureCount++;
+                if (cfg.OpenCodeCacheKnown)
+                {
+                    GoState cached = CachedOpenCodeState();
+                    ApplyCachedOpenCodeRows(cached);
+                }
+                else
+                {
+                    ApplyRow(row5h, go, go.Rolling, false);
+                    ApplyRow(rowWeek, go, go.Weekly, false);
+                    ApplyRow(rowMonth, go, go.Monthly, false);
+                }
+            }
+            else
+            {
+                openCodeFailureCount = 0;
+                openCodeLastSuccess = DateTime.Now;
+                CacheOpenCode(go);
+                ApplyRow(row5h, go, go.Rolling, false);
+                ApplyRow(rowWeek, go, go.Weekly, false);
+                ApplyRow(rowMonth, go, go.Monthly, false);
+            }
+
+            UpdateFetchTooltips();
             if (edgeHidden || hintAlpha > 0f) Invalidate();
+        }
+
+        private void RestoreOpenCodeCache()
+        {
+            if (!cfg.OpenCodeCacheKnown || cfg.OpenCodeKey.Length == 0) return;
+            openCodeLastSuccess = LocalTimeFromUtcTicks(cfg.OpenCodeCacheUtcTicks);
+            ApplyCachedOpenCodeRows(CachedOpenCodeState());
+        }
+
+        private void ApplyCachedOpenCodeRows(GoState cached)
+        {
+            ApplyRow(row5h, cached, cached.Rolling, true);
+            ApplyRow(rowWeek, cached, cached.Weekly, true);
+            ApplyRow(rowMonth, cached, cached.Monthly, true);
+        }
+
+        private GoState CachedOpenCodeState()
+        {
+            GoState go = new GoState { Configured = true, Ok = true };
+            go.Rolling = CachedWindow(
+                cfg.OpenCodeRollingUsed,
+                cfg.OpenCodeRollingHasData,
+                cfg.OpenCodeRollingRateLimited,
+                cfg.OpenCodeRollingResetsUtcTicks);
+            go.Weekly = CachedWindow(
+                cfg.OpenCodeWeeklyUsed,
+                cfg.OpenCodeWeeklyHasData,
+                cfg.OpenCodeWeeklyRateLimited,
+                cfg.OpenCodeWeeklyResetsUtcTicks);
+            go.Monthly = CachedWindow(
+                cfg.OpenCodeMonthlyUsed,
+                cfg.OpenCodeMonthlyHasData,
+                cfg.OpenCodeMonthlyRateLimited,
+                cfg.OpenCodeMonthlyResetsUtcTicks);
+            return go;
+        }
+
+        private static GoWindow CachedWindow(int used, bool hasData, bool rateLimited, long resetsUtcTicks)
+        {
+            GoWindow window = new GoWindow();
+            window.Used = used;
+            window.HasData = hasData;
+            window.RateLimited = rateLimited;
+            window.ResetsAt = FromUtcTicks(resetsUtcTicks);
+            return window;
+        }
+
+        private void CacheOpenCode(GoState go)
+        {
+            cfg.OpenCodeCacheKnown = true;
+            cfg.OpenCodeCacheUtcTicks = DateTime.UtcNow.Ticks;
+            cfg.OpenCodeRollingUsed = go.Rolling.Used;
+            cfg.OpenCodeRollingHasData = go.Rolling.HasData;
+            cfg.OpenCodeRollingRateLimited = go.Rolling.RateLimited;
+            cfg.OpenCodeRollingResetsUtcTicks = ToUtcTicks(go.Rolling.ResetsAt);
+            cfg.OpenCodeWeeklyUsed = go.Weekly.Used;
+            cfg.OpenCodeWeeklyHasData = go.Weekly.HasData;
+            cfg.OpenCodeWeeklyRateLimited = go.Weekly.RateLimited;
+            cfg.OpenCodeWeeklyResetsUtcTicks = ToUtcTicks(go.Weekly.ResetsAt);
+            cfg.OpenCodeMonthlyUsed = go.Monthly.Used;
+            cfg.OpenCodeMonthlyHasData = go.Monthly.HasData;
+            cfg.OpenCodeMonthlyRateLimited = go.Monthly.RateLimited;
+            cfg.OpenCodeMonthlyResetsUtcTicks = ToUtcTicks(go.Monthly.ResetsAt);
+            cfg.Save();
+        }
+
+        private void ClearOpenCodeRows()
+        {
+            bool configured = cfg.OpenCodeKey.Length > 0;
+            ResetRow(row5h, configured);
+            ResetRow(rowWeek, configured);
+            ResetRow(rowMonth, configured);
+        }
+
+        private void ResetRow(UsageRow row, bool configured)
+        {
+            row.Configured = configured;
+            row.Error = "";
+            row.RateLimited = false;
+            row.Stale = false;
+            row.ResetsAt = null;
+            row.SetAnimatedRemaining(-1, clock.ElapsedMilliseconds, false);
+            row.Invalidate();
         }
 
         private static string CurrencySymbol(string currency)
@@ -1892,11 +2159,12 @@ namespace QuotaFloat
             return string.IsNullOrEmpty(currency) ? "" : currency + " ";
         }
 
-        private void ApplyRow(UsageRow row, GoState go, GoWindow w)
+        private void ApplyRow(UsageRow row, GoState go, GoWindow w, bool stale)
         {
             row.Configured = go.Configured;
             row.Error = go.Ok ? "" : go.Error;
             row.RateLimited = go.Ok && w.RateLimited;
+            row.Stale = stale;
             row.ResetsAt = go.Ok ? w.ResetsAt : null;
             int remaining = go.Ok && w.HasData && !w.RateLimited
                 ? Math.Max(0, UiMetrics.PercentMax - w.Used) : -1;
@@ -3011,13 +3279,12 @@ namespace QuotaFloat
             tips.SetToolTip(dsBar, Strings.DeepSeekBarTip);
             tips.SetToolTip(refreshBar, Strings.RefreshBarTip);
             tips.SetToolTip(inlineEditor, Strings.InlineEditorTip);
-            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
             tips.SetToolTip(goCard, Strings.OpenCodeCardTip);
             tips.SetToolTip(goTitle, Strings.OpenCodeTitleTip);
             tips.SetToolTip(row5h, Strings.FiveHoursTip);
             tips.SetToolTip(rowWeek, Strings.WeekTip);
             tips.SetToolTip(rowMonth, Strings.MonthTip);
-            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
+            UpdateFetchTooltips();
         }
 
         private void SetLanguage(string code)
@@ -3458,12 +3725,19 @@ namespace QuotaFloat
                         if (deepSeekChanged)
                         {
                             InvalidateDeepSeekFetch();
+                            deepSeekLastSuccess = null;
                             lastDeepSeekBalanceKnown = false;
                             deepSeekStatus.Text = Strings.Loading;
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
-                        if (openCodeChanged) InvalidateOpenCodeFetch();
+                        if (openCodeChanged)
+                        {
+                            InvalidateOpenCodeFetch();
+                            openCodeLastSuccess = null;
+                            ClearOpenCodeRows();
+                        }
+                        UpdateFetchTooltips();
                         lastDeepSeekFetchStamp = Timing.NoStamp;
                         lastOpenCodeFetchStamp = Timing.NoStamp;
                         StartFetch();
@@ -3677,6 +3951,8 @@ namespace QuotaFloat
         public const int VisibleRefreshSeconds = 120;
         public const int HiddenRefreshSeconds = 600;
         public const int RevealRefreshMinAgeSeconds = 45;
+        public const int RetryBaseSeconds = 30;
+        public const int RetryShiftLimit = 8;
 
         public const int UiTickMilliseconds = 1000;
         public const int EdgeTickMilliseconds = 120;
@@ -3793,24 +4069,61 @@ namespace QuotaFloat
     using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Web.Script.Serialization;
     using System.Windows.Forms;
     using Microsoft.Win32;
     internal static class Program
     {
+        private const string MutexName = "Local\\QuotaFloat.SingleInstance";
+
         [STAThread]
         private static void Main()
         {
-            try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; }
-            catch { }
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            MainForm form = new MainForm();
+            bool demoMode = HasArg("--demo");
+            Mutex mutex = null;
+            if (!demoMode)
+            {
+                bool created;
+                mutex = new Mutex(true, MutexName, out created);
+                if (!created)
+                {
+                    mutex.Dispose();
+                    return;
+                }
+            }
+
+            try
+            {
+                try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; }
+                catch { }
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                MainForm form = new MainForm();
 #if DEBUG
-            DebugShell.Start(form);
+                DebugShell.Start(form);
 #endif
-            Application.Run(form);
+                Application.Run(form);
+            }
+            finally
+            {
+                if (mutex != null)
+                {
+                    try { mutex.ReleaseMutex(); }
+                    catch { }
+                    mutex.Dispose();
+                }
+            }
+        }
+
+        private static bool HasArg(string name)
+        {
+            foreach (string arg in Environment.GetCommandLineArgs())
+            {
+                if (string.Equals(arg, name, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
         }
     }
 }
@@ -3927,6 +4240,7 @@ namespace QuotaFloat
                 string dsNew = dsBox.Text.Trim();
                 string goNew = goBox.Text.Trim();
                 bool dsChanged = dsNew.Length > 0 && dsNew != cfg.DeepSeekKey;
+                bool goChanged = goNew.Length > 0 && goNew != cfg.OpenCodeKey;
                 if (dsNew.Length > 0) cfg.DeepSeekKey = dsNew;
                 if (goNew.Length > 0) cfg.OpenCodeKey = goNew;
                 if (dsChanged)
@@ -3937,7 +4251,9 @@ namespace QuotaFloat
                     cfg.DeepSeekSpent = 0m;
                     cfg.DeepSeekCurrency = "CNY";
                     cfg.DeepSeekBalanceKnown = false;
+                    cfg.DeepSeekCacheUtcTicks = 0;
                 }
+                if (goChanged) cfg.ClearOpenCodeCache();
                 cfg.Save();
                 DialogResult = DialogResult.OK;
                 Close();
@@ -4112,6 +4428,22 @@ namespace QuotaFloat
         public static string RateLimited(string countdown)
         {
             return IsZh ? "耗尽 · " + countdown : "Exhausted · " + countdown;
+        }
+
+        public static string StalePrefix { get { return T("已过期 · ", "Stale · "); } }
+
+        public static string LastSuccess(DateTime? time)
+        {
+            if (!time.HasValue) return T("最后成功：尚无记录", "Last success: none");
+            string value = time.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            return T("最后成功：" + value, "Last success: " + value);
+        }
+
+        public static string ConsecutiveFailures(int count)
+        {
+            return IsZh
+                ? "连续失败：" + count.ToString(CultureInfo.InvariantCulture) + " 次"
+                : "Consecutive failures: " + count.ToString(CultureInfo.InvariantCulture);
         }
 
         public static string RefreshNow { get { return T("全部刷新", "Refresh all"); } }

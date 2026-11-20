@@ -65,6 +65,7 @@ namespace QuotaFloat
                 string dsNew = dsBox.Text.Trim();
                 string goNew = goBox.Text.Trim();
                 bool dsChanged = dsNew.Length > 0 && dsNew != cfg.DeepSeekKey;
+                bool goChanged = goNew.Length > 0 && goNew != cfg.OpenCodeKey;
                 if (dsNew.Length > 0) cfg.DeepSeekKey = dsNew;
                 if (goNew.Length > 0) cfg.OpenCodeKey = goNew;
                 if (dsChanged)
@@ -75,7 +76,9 @@ namespace QuotaFloat
                     cfg.DeepSeekSpent = 0m;
                     cfg.DeepSeekCurrency = "CNY";
                     cfg.DeepSeekBalanceKnown = false;
+                    cfg.DeepSeekCacheUtcTicks = 0;
                 }
+                if (goChanged) cfg.ClearOpenCodeCache();
                 cfg.Save();
                 DialogResult = DialogResult.OK;
                 Close();

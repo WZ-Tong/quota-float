@@ -96,6 +96,22 @@ namespace QuotaFloat
             return IsZh ? "耗尽 · " + countdown : "Exhausted · " + countdown;
         }
 
+        public static string StalePrefix { get { return T("已过期 · ", "Stale · "); } }
+
+        public static string LastSuccess(DateTime? time)
+        {
+            if (!time.HasValue) return T("最后成功：尚无记录", "Last success: none");
+            string value = time.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            return T("最后成功：" + value, "Last success: " + value);
+        }
+
+        public static string ConsecutiveFailures(int count)
+        {
+            return IsZh
+                ? "连续失败：" + count.ToString(CultureInfo.InvariantCulture) + " 次"
+                : "Consecutive failures: " + count.ToString(CultureInfo.InvariantCulture);
+        }
+
         public static string RefreshNow { get { return T("全部刷新", "Refresh all"); } }
         public static string RefreshNowTip { get { return T("同时刷新 DeepSeek 与 OpenCode", "Refresh DeepSeek and OpenCode"); } }
         public static string RefreshDeepSeek { get { return T("刷新 DeepSeek", "Refresh DeepSeek"); } }

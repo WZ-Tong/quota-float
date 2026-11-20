@@ -1,0 +1,7 @@
+﻿[assembly: System.Reflection.AssemblyTitle("QuotaFloat")]
+[assembly: System.Reflection.AssemblyDescription("DeepSeek and OpenCode quota widget")]
+[assembly: System.Reflection.AssemblyProduct("QuotaFloat")]
+[assembly: System.Reflection.AssemblyCompany("WZ-Tong")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("1.3.0")]

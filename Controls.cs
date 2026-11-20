@@ -270,6 +270,7 @@ namespace QuotaFloat
         public int Remaining = -1;
         public bool Configured;
         public bool RateLimited;
+        public bool Stale;
         public string Error = "";
         public DateTimeOffset? ResetsAt;
 
@@ -342,6 +343,7 @@ namespace QuotaFloat
             if (Error.Length > 0) return Error;
             if (RateLimited) return Strings.RateLimited(Countdown());
             if (Remaining < 0) return Strings.WaitingData;
+            if (Stale) return Strings.StalePrefix + Countdown();
             return Countdown();
         }
 
@@ -361,7 +363,8 @@ namespace QuotaFloat
                 Palette.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             string suffix = SuffixText();
-            Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red : Palette.Sub;
+            Color suffixColor = (Error.Length > 0 || RateLimited) ? Palette.Red :
+                (Stale && Remaining >= 0 ? Palette.Yellow : Palette.Sub);
             const int suffixLeft = UiMetrics.UsageSuffixLeft;
             int suffixW = w - UiMetrics.UsagePercentWidth - suffixLeft;
             if (suffixW > UiMetrics.UsageSuffixMinWidth)

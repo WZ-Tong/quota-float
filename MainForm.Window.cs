@@ -320,12 +320,19 @@ namespace QuotaFloat
                         if (deepSeekChanged)
                         {
                             InvalidateDeepSeekFetch();
+                            deepSeekLastSuccess = null;
                             lastDeepSeekBalanceKnown = false;
                             deepSeekStatus.Text = Strings.Loading;
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
-                        if (openCodeChanged) InvalidateOpenCodeFetch();
+                        if (openCodeChanged)
+                        {
+                            InvalidateOpenCodeFetch();
+                            openCodeLastSuccess = null;
+                            ClearOpenCodeRows();
+                        }
+                        UpdateFetchTooltips();
                         lastDeepSeekFetchStamp = Timing.NoStamp;
                         lastOpenCodeFetchStamp = Timing.NoStamp;
                         StartFetch();

@@ -72,6 +72,10 @@ namespace QuotaFloat
         private bool fetchingOpenCode;
         private int deepSeekRequestVersion;
         private int openCodeRequestVersion;
+        private int deepSeekFailureCount;
+        private int openCodeFailureCount;
+        private DateTime? deepSeekLastSuccess;
+        private DateTime? openCodeLastSuccess;
         private long lastDeepSeekFetchStamp = Timing.NoStamp;
         private long lastOpenCodeFetchStamp = Timing.NoStamp;
         private bool placed;
@@ -281,6 +285,10 @@ namespace QuotaFloat
             goCard.Controls.Add(row5h);
             goCard.Controls.Add(rowWeek);
             goCard.Controls.Add(rowMonth);
+            bool openCodeConfigured = cfg.OpenCodeKey.Length > 0;
+            row5h.Configured = openCodeConfigured;
+            rowWeek.Configured = openCodeConfigured;
+            rowMonth.Configured = openCodeConfigured;
 
             menu = CreateMenu();
             ContextMenuStrip = menu;
@@ -317,7 +325,9 @@ namespace QuotaFloat
                 lastDeepSeekCurrency = string.IsNullOrEmpty(cfg.DeepSeekCurrency) ? "CNY" : cfg.DeepSeekCurrency;
                 lastDeepSeekBalanceKnown = true;
             }
+            deepSeekLastSuccess = LocalTimeFromUtcTicks(cfg.DeepSeekCacheUtcTicks);
             UpdateDisplay();
+            RestoreOpenCodeCache();
             ApplyTooltips();
 
             uiTimer = new Timer();
