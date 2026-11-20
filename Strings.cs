@@ -47,6 +47,43 @@ namespace QuotaFloat
         public static string Peak { get { return T("峰时", "Peak"); } }
         public static string OffPeak { get { return T("谷时", "Off-peak"); } }
         public static string NotSet { get { return T("未设置", "Not set"); } }
+        public static string DeepSeekName { get { return "DeepSeek"; } }
+        public static string OpenCodeName { get { return "OpenCode"; } }
+
+        public static string WindowTip { get { return T("拖动空白处移动；三击顶部打开设置", "Drag empty space to move; triple-click the header for settings"); } }
+        public static string DeepSeekCardTip { get { return T("DeepSeek 账户余额", "DeepSeek account balance"); } }
+        public static string DeepSeekTitleTip { get { return T("DeepSeek 余额卡片", "DeepSeek balance card"); } }
+        public static string DeepSeekPeriodTip { get { return T("DeepSeek API 峰谷时段（UTC+8）", "DeepSeek API peak and off-peak hours (UTC+8)"); } }
+        public static string DeepSeekStatusTip { get { return T("DeepSeek 查询状态与错误信息", "DeepSeek request status and errors"); } }
+        public static string DeepSeekBalanceTip { get { return T("当前 DeepSeek 账户余额", "Current DeepSeek account balance"); } }
+        public static string EquationTip { get { return T("余额 = 花费与总额的关系；双击数值可编辑", "Balance with spent and total; double-click a value to edit"); } }
+        public static string BalanceTip { get { return T("当前余额", "Current balance"); } }
+        public static string SpentTip { get { return T("已花费；双击编辑", "Spent; double-click to edit"); } }
+        public static string TotalTip { get { return T("总额；双击编辑", "Total; double-click to edit"); } }
+        public static string PlusTip { get { return T("花费", "Spent"); } }
+        public static string EqualsTip { get { return T("总额", "Total"); } }
+        public static string DeepSeekBarTip { get { return T("余额占总额比例", "Balance as a share of total"); } }
+        public static string RefreshBarTip { get { return T("距离下次自动刷新", "Time until the next automatic refresh"); } }
+        public static string InlineEditorTip { get { return T("回车提交，Esc 取消", "Press Enter to apply, Esc to cancel"); } }
+        public static string OpenCodeCardTip { get { return T("OpenCode Go 额度窗口", "OpenCode Go quota windows"); } }
+        public static string OpenCodeTitleTip { get { return T("OpenCode 额度卡片", "OpenCode quota card"); } }
+        public static string FiveHoursTip { get { return T("5 小时滚动窗口中的剩余额度", "Remaining in the 5-hour rolling window"); } }
+        public static string WeekTip { get { return T("本周剩余额度", "Remaining this week"); } }
+        public static string MonthTip { get { return T("本月剩余额度", "Remaining this month"); } }
+        public static string ThemeTip { get { return T("选择浅色、深色或跟随系统", "Choose light, dark, or follow the system"); } }
+        public static string FollowSystemTip { get { return T("跟随 Windows 应用主题", "Follow the Windows app theme"); } }
+        public static string LightTip { get { return T("始终使用浅色主题", "Always use the light theme"); } }
+        public static string DarkTip { get { return T("始终使用深色主题", "Always use the dark theme"); } }
+        public static string LanguageTip { get { return T("切换界面语言", "Switch interface language"); } }
+        public static string SettingsTip { get { return T("配置 API Key", "Configure API keys"); } }
+        public static string ExitTip { get { return T("关闭 QuotaFloat", "Close QuotaFloat"); } }
+        public static string DeepSeekApiKey { get { return T("DeepSeek API 密钥", "DeepSeek API Key"); } }
+        public static string OpenCodeApiKey { get { return T("OpenCode API 密钥", "OpenCode API Key"); } }
+        public static string CurrentKeyTip { get { return T("当前 Key 的掩码", "Masked current key"); } }
+        public static string ApiKeyInputTip { get { return T("留空则保持当前 Key", "Leave blank to keep the current key"); } }
+        public static string SaveTip { get { return T("保存并立即刷新", "Save and refresh now"); } }
+        public static string CancelTip { get { return T("放弃修改并关闭", "Discard changes and close"); } }
+        public static string SettingsFormTip { get { return T("API Key 使用 Windows DPAPI 加密保存在本机", "API keys are stored locally and protected with Windows DPAPI"); } }
 
         public static string Remaining(int percent)
         {

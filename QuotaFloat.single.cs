@@ -924,6 +924,8 @@ namespace QuotaFloat
         private readonly Timer edgeTimer;
         private readonly Timer slideTimer;
         private readonly Stopwatch clock = Stopwatch.StartNew();
+        private readonly Label dsTitle;
+        private readonly Label goTitle;
         private readonly Label deepSeekBalance;
         private readonly Label deepSeekPeriod;
         private readonly Label deepSeekStatus;
@@ -1033,7 +1035,7 @@ namespace QuotaFloat
                 ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.DeepSeekCardHeight);
             Controls.Add(dsCard);
 
-            Label dsTitle = NewLabel("DeepSeek", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+            dsTitle = NewLabel(Strings.DeepSeekName, UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.DeepSeekTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
             dsTitle.TextAlign = ContentAlignment.MiddleLeft;
@@ -1051,7 +1053,6 @@ namespace QuotaFloat
                 UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
             dsRefreshButton.AccessibleName = Strings.RefreshDeepSeek;
             dsRefreshButton.Click += delegate { StartDeepSeekFetch(); };
-            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
             dsCard.Controls.Add(dsRefreshButton);
 
             deepSeekStatus = NewLabel(Strings.Loading, UiMetrics.CardTextInset,
@@ -1135,7 +1136,7 @@ namespace QuotaFloat
                 ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.OpenCodeCardHeight);
             Controls.Add(goCard);
 
-            Label goTitle = NewLabel("OpenCode", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+            goTitle = NewLabel(Strings.OpenCodeName, UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.GoTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
             goTitle.TextAlign = ContentAlignment.MiddleLeft;
@@ -1147,7 +1148,6 @@ namespace QuotaFloat
                 UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
             goRefreshButton.AccessibleName = Strings.RefreshOpenCode;
             goRefreshButton.Click += delegate { StartOpenCodeFetch(); };
-            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
             goCard.Controls.Add(goRefreshButton);
 
             row5h = NewRow(Strings.FiveHours, UiMetrics.CardTextInset, UiMetrics.GoRowTop,
@@ -1196,6 +1196,7 @@ namespace QuotaFloat
                 lastDeepSeekBalanceKnown = true;
             }
             UpdateDisplay();
+            ApplyTooltips();
 
             uiTimer = new Timer();
             uiTimer.Interval = Timing.UiTickMilliseconds;
@@ -1310,9 +1311,13 @@ namespace QuotaFloat
             };
             menu.Items.Add(captureItem);
             ToolStripMenuItem themeMenu = new ToolStripMenuItem(Strings.Theme);
+            themeMenu.ToolTipText = Strings.ThemeTip;
             ToolStripMenuItem autoItem = new ToolStripMenuItem(Strings.FollowSystem);
+            autoItem.ToolTipText = Strings.FollowSystemTip;
             ToolStripMenuItem lightItem = new ToolStripMenuItem(Strings.Light);
+            lightItem.ToolTipText = Strings.LightTip;
             ToolStripMenuItem darkItem = new ToolStripMenuItem(Strings.Dark);
+            darkItem.ToolTipText = Strings.DarkTip;
             autoItem.Checked = cfg.ThemeMode == AppConfig.ThemeFollowSystem;
             lightItem.Checked = cfg.ThemeMode == AppConfig.ThemeLight;
             darkItem.Checked = cfg.ThemeMode == AppConfig.ThemeDark;
@@ -1340,6 +1345,7 @@ namespace QuotaFloat
             themeMenu.DropDownItems.Add(autoItem);
             themeMenu.DropDownItems.Add(lightItem);
             themeMenu.DropDownItems.Add(darkItem);
+            themeMenu.DropDown.ShowItemToolTips = true;
             menu.Items.Add(themeMenu);
             ToolStripMenuItem lockItem = new ToolStripMenuItem(Strings.LockWidth);
             lockItem.ToolTipText = Strings.LockWidthTip;
@@ -1374,11 +1380,15 @@ namespace QuotaFloat
             };
             menu.Items.Add(autoStartItem);
             ToolStripMenuItem languageItem = new ToolStripMenuItem(Strings.LanguageSwitch);
+            languageItem.ToolTipText = Strings.LanguageTip;
             languageItem.Click += delegate { SetLanguage(Strings.OtherLanguageCode); };
             menu.Items.Add(languageItem);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(Strings.SettingsEllipsis, null, delegate { OpenSettings(); });
-            menu.Items.Add(Strings.Exit, null, delegate { Close(); });
+            ToolStripItem settingsItem = menu.Items.Add(Strings.SettingsEllipsis, null,
+                delegate { OpenSettings(); });
+            settingsItem.ToolTipText = Strings.SettingsTip;
+            ToolStripItem exitItem = menu.Items.Add(Strings.Exit, null, delegate { Close(); });
+            exitItem.ToolTipText = Strings.ExitTip;
             return menu;
         }
 
@@ -2952,7 +2962,35 @@ namespace QuotaFloat
                 lastOpenCodeFetchStamp = Timing.NoStamp;
                 StartFetch();
             }
+            ApplyTooltips();
             Invalidate(true);
+        }
+
+        private void ApplyTooltips()
+        {
+            tips.ShowAlways = true;
+            tips.SetToolTip(this, Strings.WindowTip);
+            tips.SetToolTip(dsCard, Strings.DeepSeekCardTip);
+            tips.SetToolTip(dsTitle, Strings.DeepSeekTitleTip);
+            tips.SetToolTip(deepSeekPeriod, Strings.DeepSeekPeriodTip);
+            tips.SetToolTip(deepSeekStatus, Strings.DeepSeekStatusTip);
+            tips.SetToolTip(deepSeekBalanceOnly, Strings.DeepSeekBalanceTip);
+            tips.SetToolTip(equationPanel, Strings.EquationTip);
+            tips.SetToolTip(deepSeekBalance, Strings.BalanceTip);
+            tips.SetToolTip(plusLabel, Strings.PlusTip);
+            tips.SetToolTip(spentLabel, Strings.SpentTip);
+            tips.SetToolTip(equalsLabel, Strings.EqualsTip);
+            tips.SetToolTip(totalLabel, Strings.TotalTip);
+            tips.SetToolTip(dsBar, Strings.DeepSeekBarTip);
+            tips.SetToolTip(refreshBar, Strings.RefreshBarTip);
+            tips.SetToolTip(inlineEditor, Strings.InlineEditorTip);
+            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
+            tips.SetToolTip(goCard, Strings.OpenCodeCardTip);
+            tips.SetToolTip(goTitle, Strings.OpenCodeTitleTip);
+            tips.SetToolTip(row5h, Strings.FiveHoursTip);
+            tips.SetToolTip(rowWeek, Strings.WeekTip);
+            tips.SetToolTip(rowMonth, Strings.MonthTip);
+            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
         }
 
         private void SetLanguage(string code)
@@ -3801,6 +3839,7 @@ namespace QuotaFloat
         private readonly AppConfig cfg;
         private readonly TextBox dsBox;
         private readonly TextBox goBox;
+        private readonly ToolTip tips = new ToolTip();
 
         public SettingsForm(AppConfig config)
         {
@@ -3817,14 +3856,17 @@ namespace QuotaFloat
             Font = new Font(UiMetrics.FontFamily, UiMetrics.FontBody);
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(UiMetrics.DefaultDpi, UiMetrics.DefaultDpi);
+            tips.ShowAlways = true;
 
-            AddLabel("DeepSeek API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsLabelTop, UiMetrics.SettingsLabelWidth);
+            Label dsLabel = AddLabel(Strings.DeepSeekApiKey, UiMetrics.SettingsMargin,
+                UiMetrics.SettingsLabelTop, UiMetrics.SettingsLabelWidth);
             Label dsHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.DeepSeekKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsLabelTop, UiMetrics.SettingsHintWidth);
             dsHint.TextAlign = ContentAlignment.MiddleRight;
             dsHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
             dsBox = AddInput(UiMetrics.SettingsMargin, UiMetrics.SettingsInputTop, UiMetrics.SettingsInputWidth);
 
-            AddLabel("OpenCode API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsLabelWidth);
+            Label goLabel = AddLabel(Strings.OpenCodeApiKey, UiMetrics.SettingsMargin,
+                UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsLabelWidth);
             Label goHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.OpenCodeKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsHintWidth);
             goHint.TextAlign = ContentAlignment.MiddleRight;
             goHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
@@ -3865,6 +3907,22 @@ namespace QuotaFloat
 
             AcceptButton = save;
             CancelButton = cancel;
+
+            tips.SetToolTip(this, Strings.SettingsFormTip);
+            tips.SetToolTip(dsLabel, Strings.DeepSeekApiKey);
+            tips.SetToolTip(dsHint, Strings.CurrentKeyTip);
+            tips.SetToolTip(dsBox, Strings.ApiKeyInputTip);
+            tips.SetToolTip(goLabel, Strings.OpenCodeApiKey);
+            tips.SetToolTip(goHint, Strings.CurrentKeyTip);
+            tips.SetToolTip(goBox, Strings.ApiKeyInputTip);
+            tips.SetToolTip(save, Strings.SaveTip);
+            tips.SetToolTip(cancel, Strings.CancelTip);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) tips.Dispose();
+            base.Dispose(disposing);
         }
 
         private Label AddLabel(string text, int x, int y, int w)
@@ -3960,6 +4018,43 @@ namespace QuotaFloat
         public static string Peak { get { return T("峰时", "Peak"); } }
         public static string OffPeak { get { return T("谷时", "Off-peak"); } }
         public static string NotSet { get { return T("未设置", "Not set"); } }
+        public static string DeepSeekName { get { return "DeepSeek"; } }
+        public static string OpenCodeName { get { return "OpenCode"; } }
+
+        public static string WindowTip { get { return T("拖动空白处移动；三击顶部打开设置", "Drag empty space to move; triple-click the header for settings"); } }
+        public static string DeepSeekCardTip { get { return T("DeepSeek 账户余额", "DeepSeek account balance"); } }
+        public static string DeepSeekTitleTip { get { return T("DeepSeek 余额卡片", "DeepSeek balance card"); } }
+        public static string DeepSeekPeriodTip { get { return T("DeepSeek API 峰谷时段（UTC+8）", "DeepSeek API peak and off-peak hours (UTC+8)"); } }
+        public static string DeepSeekStatusTip { get { return T("DeepSeek 查询状态与错误信息", "DeepSeek request status and errors"); } }
+        public static string DeepSeekBalanceTip { get { return T("当前 DeepSeek 账户余额", "Current DeepSeek account balance"); } }
+        public static string EquationTip { get { return T("余额 = 花费与总额的关系；双击数值可编辑", "Balance with spent and total; double-click a value to edit"); } }
+        public static string BalanceTip { get { return T("当前余额", "Current balance"); } }
+        public static string SpentTip { get { return T("已花费；双击编辑", "Spent; double-click to edit"); } }
+        public static string TotalTip { get { return T("总额；双击编辑", "Total; double-click to edit"); } }
+        public static string PlusTip { get { return T("花费", "Spent"); } }
+        public static string EqualsTip { get { return T("总额", "Total"); } }
+        public static string DeepSeekBarTip { get { return T("余额占总额比例", "Balance as a share of total"); } }
+        public static string RefreshBarTip { get { return T("距离下次自动刷新", "Time until the next automatic refresh"); } }
+        public static string InlineEditorTip { get { return T("回车提交，Esc 取消", "Press Enter to apply, Esc to cancel"); } }
+        public static string OpenCodeCardTip { get { return T("OpenCode Go 额度窗口", "OpenCode Go quota windows"); } }
+        public static string OpenCodeTitleTip { get { return T("OpenCode 额度卡片", "OpenCode quota card"); } }
+        public static string FiveHoursTip { get { return T("5 小时滚动窗口中的剩余额度", "Remaining in the 5-hour rolling window"); } }
+        public static string WeekTip { get { return T("本周剩余额度", "Remaining this week"); } }
+        public static string MonthTip { get { return T("本月剩余额度", "Remaining this month"); } }
+        public static string ThemeTip { get { return T("选择浅色、深色或跟随系统", "Choose light, dark, or follow the system"); } }
+        public static string FollowSystemTip { get { return T("跟随 Windows 应用主题", "Follow the Windows app theme"); } }
+        public static string LightTip { get { return T("始终使用浅色主题", "Always use the light theme"); } }
+        public static string DarkTip { get { return T("始终使用深色主题", "Always use the dark theme"); } }
+        public static string LanguageTip { get { return T("切换界面语言", "Switch interface language"); } }
+        public static string SettingsTip { get { return T("配置 API Key", "Configure API keys"); } }
+        public static string ExitTip { get { return T("关闭 QuotaFloat", "Close QuotaFloat"); } }
+        public static string DeepSeekApiKey { get { return T("DeepSeek API 密钥", "DeepSeek API Key"); } }
+        public static string OpenCodeApiKey { get { return T("OpenCode API 密钥", "OpenCode API Key"); } }
+        public static string CurrentKeyTip { get { return T("当前 Key 的掩码", "Masked current key"); } }
+        public static string ApiKeyInputTip { get { return T("留空则保持当前 Key", "Leave blank to keep the current key"); } }
+        public static string SaveTip { get { return T("保存并立即刷新", "Save and refresh now"); } }
+        public static string CancelTip { get { return T("放弃修改并关闭", "Discard changes and close"); } }
+        public static string SettingsFormTip { get { return T("API Key 使用 Windows DPAPI 加密保存在本机", "API keys are stored locally and protected with Windows DPAPI"); } }
 
         public static string Remaining(int percent)
         {

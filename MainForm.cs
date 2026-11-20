@@ -41,6 +41,8 @@ namespace QuotaFloat
         private readonly Timer edgeTimer;
         private readonly Timer slideTimer;
         private readonly Stopwatch clock = Stopwatch.StartNew();
+        private readonly Label dsTitle;
+        private readonly Label goTitle;
         private readonly Label deepSeekBalance;
         private readonly Label deepSeekPeriod;
         private readonly Label deepSeekStatus;
@@ -150,7 +152,7 @@ namespace QuotaFloat
                 ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.DeepSeekCardHeight);
             Controls.Add(dsCard);
 
-            Label dsTitle = NewLabel("DeepSeek", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+            dsTitle = NewLabel(Strings.DeepSeekName, UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.DeepSeekTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
             dsTitle.TextAlign = ContentAlignment.MiddleLeft;
@@ -168,7 +170,6 @@ namespace QuotaFloat
                 UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
             dsRefreshButton.AccessibleName = Strings.RefreshDeepSeek;
             dsRefreshButton.Click += delegate { StartDeepSeekFetch(); };
-            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
             dsCard.Controls.Add(dsRefreshButton);
 
             deepSeekStatus = NewLabel(Strings.Loading, UiMetrics.CardTextInset,
@@ -252,7 +253,7 @@ namespace QuotaFloat
                 ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.OpenCodeCardHeight);
             Controls.Add(goCard);
 
-            Label goTitle = NewLabel("OpenCode", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+            goTitle = NewLabel(Strings.OpenCodeName, UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.GoTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
             goTitle.TextAlign = ContentAlignment.MiddleLeft;
@@ -264,7 +265,6 @@ namespace QuotaFloat
                 UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
             goRefreshButton.AccessibleName = Strings.RefreshOpenCode;
             goRefreshButton.Click += delegate { StartOpenCodeFetch(); };
-            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
             goCard.Controls.Add(goRefreshButton);
 
             row5h = NewRow(Strings.FiveHours, UiMetrics.CardTextInset, UiMetrics.GoRowTop,
@@ -313,6 +313,7 @@ namespace QuotaFloat
                 lastDeepSeekBalanceKnown = true;
             }
             UpdateDisplay();
+            ApplyTooltips();
 
             uiTimer = new Timer();
             uiTimer.Interval = Timing.UiTickMilliseconds;
@@ -427,9 +428,13 @@ namespace QuotaFloat
             };
             menu.Items.Add(captureItem);
             ToolStripMenuItem themeMenu = new ToolStripMenuItem(Strings.Theme);
+            themeMenu.ToolTipText = Strings.ThemeTip;
             ToolStripMenuItem autoItem = new ToolStripMenuItem(Strings.FollowSystem);
+            autoItem.ToolTipText = Strings.FollowSystemTip;
             ToolStripMenuItem lightItem = new ToolStripMenuItem(Strings.Light);
+            lightItem.ToolTipText = Strings.LightTip;
             ToolStripMenuItem darkItem = new ToolStripMenuItem(Strings.Dark);
+            darkItem.ToolTipText = Strings.DarkTip;
             autoItem.Checked = cfg.ThemeMode == AppConfig.ThemeFollowSystem;
             lightItem.Checked = cfg.ThemeMode == AppConfig.ThemeLight;
             darkItem.Checked = cfg.ThemeMode == AppConfig.ThemeDark;
@@ -457,6 +462,7 @@ namespace QuotaFloat
             themeMenu.DropDownItems.Add(autoItem);
             themeMenu.DropDownItems.Add(lightItem);
             themeMenu.DropDownItems.Add(darkItem);
+            themeMenu.DropDown.ShowItemToolTips = true;
             menu.Items.Add(themeMenu);
             ToolStripMenuItem lockItem = new ToolStripMenuItem(Strings.LockWidth);
             lockItem.ToolTipText = Strings.LockWidthTip;
@@ -491,11 +497,15 @@ namespace QuotaFloat
             };
             menu.Items.Add(autoStartItem);
             ToolStripMenuItem languageItem = new ToolStripMenuItem(Strings.LanguageSwitch);
+            languageItem.ToolTipText = Strings.LanguageTip;
             languageItem.Click += delegate { SetLanguage(Strings.OtherLanguageCode); };
             menu.Items.Add(languageItem);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(Strings.SettingsEllipsis, null, delegate { OpenSettings(); });
-            menu.Items.Add(Strings.Exit, null, delegate { Close(); });
+            ToolStripItem settingsItem = menu.Items.Add(Strings.SettingsEllipsis, null,
+                delegate { OpenSettings(); });
+            settingsItem.ToolTipText = Strings.SettingsTip;
+            ToolStripItem exitItem = menu.Items.Add(Strings.Exit, null, delegate { Close(); });
+            exitItem.ToolTipText = Strings.ExitTip;
             return menu;
         }
 

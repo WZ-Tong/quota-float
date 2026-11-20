@@ -23,6 +23,7 @@ namespace QuotaFloat
         private readonly AppConfig cfg;
         private readonly TextBox dsBox;
         private readonly TextBox goBox;
+        private readonly ToolTip tips = new ToolTip();
 
         public SettingsForm(AppConfig config)
         {
@@ -39,14 +40,17 @@ namespace QuotaFloat
             Font = new Font(UiMetrics.FontFamily, UiMetrics.FontBody);
             AutoScaleMode = AutoScaleMode.Dpi;
             AutoScaleDimensions = new SizeF(UiMetrics.DefaultDpi, UiMetrics.DefaultDpi);
+            tips.ShowAlways = true;
 
-            AddLabel("DeepSeek API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsLabelTop, UiMetrics.SettingsLabelWidth);
+            Label dsLabel = AddLabel(Strings.DeepSeekApiKey, UiMetrics.SettingsMargin,
+                UiMetrics.SettingsLabelTop, UiMetrics.SettingsLabelWidth);
             Label dsHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.DeepSeekKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsLabelTop, UiMetrics.SettingsHintWidth);
             dsHint.TextAlign = ContentAlignment.MiddleRight;
             dsHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
             dsBox = AddInput(UiMetrics.SettingsMargin, UiMetrics.SettingsInputTop, UiMetrics.SettingsInputWidth);
 
-            AddLabel("OpenCode API Key", UiMetrics.SettingsMargin, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsLabelWidth);
+            Label goLabel = AddLabel(Strings.OpenCodeApiKey, UiMetrics.SettingsMargin,
+                UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsLabelWidth);
             Label goHint = AddLabel(Strings.CurrentKey(Ui.MaskKey(cfg.OpenCodeKey)), UiMetrics.SettingsHintLeft, UiMetrics.SettingsSecondLabelTop, UiMetrics.SettingsHintWidth);
             goHint.TextAlign = ContentAlignment.MiddleRight;
             goHint.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontTiny);
@@ -87,6 +91,22 @@ namespace QuotaFloat
 
             AcceptButton = save;
             CancelButton = cancel;
+
+            tips.SetToolTip(this, Strings.SettingsFormTip);
+            tips.SetToolTip(dsLabel, Strings.DeepSeekApiKey);
+            tips.SetToolTip(dsHint, Strings.CurrentKeyTip);
+            tips.SetToolTip(dsBox, Strings.ApiKeyInputTip);
+            tips.SetToolTip(goLabel, Strings.OpenCodeApiKey);
+            tips.SetToolTip(goHint, Strings.CurrentKeyTip);
+            tips.SetToolTip(goBox, Strings.ApiKeyInputTip);
+            tips.SetToolTip(save, Strings.SaveTip);
+            tips.SetToolTip(cancel, Strings.CancelTip);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) tips.Dispose();
+            base.Dispose(disposing);
         }
 
         private Label AddLabel(string text, int x, int y, int w)

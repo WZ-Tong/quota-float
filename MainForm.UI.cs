@@ -324,7 +324,35 @@ namespace QuotaFloat
                 lastOpenCodeFetchStamp = Timing.NoStamp;
                 StartFetch();
             }
+            ApplyTooltips();
             Invalidate(true);
+        }
+
+        private void ApplyTooltips()
+        {
+            tips.ShowAlways = true;
+            tips.SetToolTip(this, Strings.WindowTip);
+            tips.SetToolTip(dsCard, Strings.DeepSeekCardTip);
+            tips.SetToolTip(dsTitle, Strings.DeepSeekTitleTip);
+            tips.SetToolTip(deepSeekPeriod, Strings.DeepSeekPeriodTip);
+            tips.SetToolTip(deepSeekStatus, Strings.DeepSeekStatusTip);
+            tips.SetToolTip(deepSeekBalanceOnly, Strings.DeepSeekBalanceTip);
+            tips.SetToolTip(equationPanel, Strings.EquationTip);
+            tips.SetToolTip(deepSeekBalance, Strings.BalanceTip);
+            tips.SetToolTip(plusLabel, Strings.PlusTip);
+            tips.SetToolTip(spentLabel, Strings.SpentTip);
+            tips.SetToolTip(equalsLabel, Strings.EqualsTip);
+            tips.SetToolTip(totalLabel, Strings.TotalTip);
+            tips.SetToolTip(dsBar, Strings.DeepSeekBarTip);
+            tips.SetToolTip(refreshBar, Strings.RefreshBarTip);
+            tips.SetToolTip(inlineEditor, Strings.InlineEditorTip);
+            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
+            tips.SetToolTip(goCard, Strings.OpenCodeCardTip);
+            tips.SetToolTip(goTitle, Strings.OpenCodeTitleTip);
+            tips.SetToolTip(row5h, Strings.FiveHoursTip);
+            tips.SetToolTip(rowWeek, Strings.WeekTip);
+            tips.SetToolTip(rowMonth, Strings.MonthTip);
+            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
         }
 
         private void SetLanguage(string code)
