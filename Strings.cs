@@ -7,6 +7,7 @@ namespace QuotaFloat
     {
         public const string ZhCn = "zh-CN";
         public const string En = "en";
+        private const string TooltipDateFormat = "yyyy-MM-dd HH:mm:ss";
 
         public static string Code = ZhCn;
 
@@ -101,7 +102,7 @@ namespace QuotaFloat
         public static string LastSuccess(DateTime? time)
         {
             if (!time.HasValue) return T("最后成功：尚无记录", "Last success: none");
-            string value = time.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            string value = time.Value.ToString(TooltipDateFormat, CultureInfo.InvariantCulture);
             return T("最后成功：" + value, "Last success: " + value);
         }
 

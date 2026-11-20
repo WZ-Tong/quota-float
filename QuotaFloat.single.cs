@@ -2419,13 +2419,14 @@ namespace QuotaFloat
         internal string DebugEquation()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\"",
+                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\" symbolMin={16}",
                 equationPanel.Width,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
                 plusLabel.Left, plusLabel.Width, plusLabel.Text,
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
                 equalsLabel.Left, equalsLabel.Width, equalsLabel.Text,
-                totalLabel.Left, totalLabel.Width, totalLabel.Text);
+                totalLabel.Left, totalLabel.Width, totalLabel.Text,
+                UiMetrics.EquationSymbolInitialWidth);
         }
 
         internal void DebugShow()
@@ -4354,6 +4355,7 @@ namespace QuotaFloat
     {
         public const string ZhCn = "zh-CN";
         public const string En = "en";
+        private const string TooltipDateFormat = "yyyy-MM-dd HH:mm:ss";
 
         public static string Code = ZhCn;
 
@@ -4448,7 +4450,7 @@ namespace QuotaFloat
         public static string LastSuccess(DateTime? time)
         {
             if (!time.HasValue) return T("最后成功：尚无记录", "Last success: none");
-            string value = time.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            string value = time.Value.ToString(TooltipDateFormat, CultureInfo.InvariantCulture);
             return T("最后成功：" + value, "Last success: " + value);
         }
 

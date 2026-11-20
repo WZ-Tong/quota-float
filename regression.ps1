@@ -146,11 +146,19 @@ try {
         Write-Host $out
         throw "Equation layout snapshot is missing."
     }
+    $symbolMin = 0
+    if ($equations[0] -match 'symbolMin=(\d+)') {
+        $symbolMin = [int]$Matches[1]
+    }
+    else {
+        Write-Host $out
+        throw "Equation symbol minimum width is missing: $($equations[0])"
+    }
     if ($equations[0] -notmatch 'plus=(\d+),(\d+),"\+"') {
         Write-Host $out
         throw "Equation plus symbol is missing or clipped: $($equations[0])"
     }
-    if ([int]$Matches[2] -lt 29) {
+    if ([int]$Matches[2] -lt $symbolMin) {
         Write-Host $out
         throw "Equation plus symbol width is too small: $($equations[0])"
     }
@@ -158,7 +166,7 @@ try {
         Write-Host $out
         throw "Equation equals symbol is missing or clipped: $($equations[0])"
     }
-    if ([int]$Matches[2] -lt 29) {
+    if ([int]$Matches[2] -lt $symbolMin) {
         Write-Host $out
         throw "Equation equals symbol width is too small: $($equations[0])"
     }
