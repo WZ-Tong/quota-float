@@ -12,10 +12,15 @@ namespace QuotaFloat
         internal string DebugStatus()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7} lang={8}",
+                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7} lang={8} interval={9} fetching={10} age={11:0.0} hz={12} frame={13} capture={14} highres={15}",
                 Bounds.Left, Bounds.Top, Bounds.Width, Bounds.Height,
                 dockedEdge, edgeHidden ? "True" : "False",
-                hintAlpha, TopMost ? "True" : "False", Strings.Code);
+                hintAlpha, TopMost ? "True" : "False", Strings.Code,
+                CurrentRefreshSeconds(), fetching ? "True" : "False",
+                lastFetchStamp == Timing.NoStamp ? -1.0 : SecondsSinceFetch(),
+                displayRefreshHz, frameIntervalMilliseconds,
+                captureExcluded ? "excluded" : "visible",
+                highResolutionTimer ? "on" : "off");
         }
 
         internal string DebugMenu()
@@ -38,19 +43,19 @@ namespace QuotaFloat
 
         internal void DebugShow()
         {
-            if (dockedEdge == 0) return;
+            if (dockedEdge == EdgeMetrics.DockNone) return;
             ShowEdge();
         }
 
         internal void DebugHide()
         {
-            if (dockedEdge == 0) return;
+            if (dockedEdge == EdgeMetrics.DockNone) return;
             HideEdge();
         }
 
         internal void DebugDock(int edge)
         {
-            if (edge < 1 || edge > 4) return;
+            if (edge < EdgeMetrics.DockLeft || edge > EdgeMetrics.DockBottom) return;
             dockedEdge = edge;
             slideAnimating = false;
             slideTimer.Stop();
@@ -73,7 +78,7 @@ namespace QuotaFloat
 
         internal void DebugMove(int x, int y)
         {
-            dockedEdge = 0;
+            dockedEdge = EdgeMetrics.DockNone;
             slideAnimating = false;
             slideTimer.Stop();
             slideOutTarget = false;

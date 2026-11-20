@@ -26,16 +26,18 @@ namespace QuotaFloat
                 ShowEdge();
                 return;
             }
-            if (editingField != 0)
+            if (editingField != UiMetrics.EquationFieldNone)
             {
                 EndEdit(true);
                 return;
             }
             Point p = PointToClient(Cursor.Position);
 
-            if (!cfg.WidthLocked && (p.X <= 6 || p.X >= ClientSize.Width - 7))
+            if (!cfg.WidthLocked && (p.X <= UiMetrics.ResizeLeftHotZone ||
+                p.X >= ClientSize.Width - UiMetrics.ResizeRightHotZone))
             {
-                resizeEdge = p.X <= 6 ? -1 : 1;
+                resizeEdge = p.X <= UiMetrics.ResizeLeftHotZone
+                    ? UiMetrics.ResizeDirectionLeft : UiMetrics.ResizeDirectionRight;
                 resizeStartX = Cursor.Position.X;
                 resizeStartBounds = Bounds;
                 resizing = true;
@@ -44,27 +46,28 @@ namespace QuotaFloat
                 return;
             }
 
-            if (cfg.EquationEnabled && equationPanel.Visible && lastDeepSeekBalanceKnown && editingField == 0)
+            if (cfg.EquationEnabled && equationPanel.Visible && lastDeepSeekBalanceKnown && editingField == UiMetrics.EquationFieldNone)
             {
                 if (ValueRect(spentLabel).Contains(p))
                 {
-                    ValueMouseDown(1);
+                    ValueMouseDown(UiMetrics.EquationFieldSpent);
                     return;
                 }
                 if (ValueRect(totalLabel).Contains(p))
                 {
-                    ValueMouseDown(2);
+                    ValueMouseDown(UiMetrics.EquationFieldTotal);
                     return;
                 }
             }
 
-            if (p.Y <= 38)
+            if (p.Y <= UiMetrics.HeaderHeight)
             {
                 DateTime now = DateTime.UtcNow;
-                if ((now - lastHeaderClick).TotalMilliseconds > 800) headerClicks = 0;
+                if ((now - lastHeaderClick).TotalMilliseconds > Timing.HeaderClickWindowMilliseconds)
+                    headerClicks = 0;
                 lastHeaderClick = now;
                 headerClicks++;
-                if (headerClicks >= 3)
+                if (headerClicks >= UiMetrics.HeaderClickCount)
                 {
                     headerClicks = 0;
                     OpenSettings();
@@ -85,7 +88,7 @@ namespace QuotaFloat
                 int frame = Width - ClientSize.Width;
                 int minOuter = AppConfig.MinWindowWidth + frame;
                 int maxOuter = AppConfig.MaxWindowWidth + frame;
-                if (resizeEdge < 0)
+                if (resizeEdge == UiMetrics.ResizeDirectionLeft)
                 {
                     int newLeft = b.Left + dx;
                     int newWidth = b.Width - dx;
@@ -104,7 +107,8 @@ namespace QuotaFloat
             }
 
             Point p = PointToClient(Cursor.Position);
-            if (!cfg.WidthLocked && (p.X <= 6 || p.X >= ClientSize.Width - 7)) Cursor = Cursors.SizeWE;
+            if (!cfg.WidthLocked && (p.X <= UiMetrics.ResizeLeftHotZone ||
+                p.X >= ClientSize.Width - UiMetrics.ResizeRightHotZone)) Cursor = Cursors.SizeWE;
             else if (Cursor == Cursors.SizeWE) Cursor = Cursors.Default;
         }
 
@@ -126,8 +130,7 @@ namespace QuotaFloat
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x80;
-                cp.ClassStyle |= CS_DROPSHADOW;
+                cp.ExStyle |= WS_EX_TOOLWINDOW;
                 return cp;
             }
         }
@@ -137,7 +140,7 @@ namespace QuotaFloat
             if (m.Msg == WM_EXITSIZEMOVE)
             {
                 int edge = DockEdge();
-                if (cfg.EdgeHide && edge != 0)
+                if (cfg.EdgeHide && edge != EdgeMetrics.DockNone)
                 {
                     dockedEdge = edge;
                     Location = VisibleLocation();
@@ -153,7 +156,7 @@ namespace QuotaFloat
                 }
                 else
                 {
-                    dockedEdge = 0;
+                    dockedEdge = EdgeMetrics.DockNone;
                     edgeHidden = false;
                     slideAnimating = false;
                     slideOutTarget = false;
@@ -165,11 +168,16 @@ namespace QuotaFloat
                 cfg.WindowWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, ClientSize.Width));
                 SaveDockState();
                 cfg.Save();
+                SyncDisplayTiming();
                 Invalidate();
             }
-            if (m.Msg == 0x001A || m.Msg == 0x031A)
+            if (m.Msg == WM_DISPLAYCHANGE)
             {
-                if (cfg.ThemeMode == 0)
+                SyncDisplayTiming();
+            }
+            if (m.Msg == WM_SETTINGCHANGE || m.Msg == WM_THEMECHANGED)
+            {
+                if (cfg.ThemeMode == AppConfig.ThemeFollowSystem)
                 {
                     bool light = IsSystemLightTheme();
                     if (light != lightTheme) ApplyTheme(light);
@@ -192,7 +200,9 @@ namespace QuotaFloat
             base.OnPaint(e);
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width - 1, Height - 1), 12))
+            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0,
+                Width - UiMetrics.WindowBorderInset, Height - UiMetrics.WindowBorderInset),
+                UiMetrics.WindowCornerRadius))
             using (Pen pen = new Pen(Palette.WindowBorder))
                 g.DrawPath(pen, p);
             PaintEdgeHint(g);
@@ -212,10 +222,10 @@ namespace QuotaFloat
                 Rectangle r = new Rectangle(x, y, Width, Height);
                 if (s.WorkingArea.IntersectsWith(r)) { onScreen = true; break; }
             }
-            if (x == -999999 || y == -999999 || !onScreen)
+            if (x == AppConfig.UnsetCoordinate || y == AppConfig.UnsetCoordinate || !onScreen)
             {
-                x = wa.Right - Width - 24;
-                y = wa.Top + 80;
+                x = wa.Right - Width - UiMetrics.InitialWindowRightInset;
+                y = wa.Top + UiMetrics.InitialWindowTop;
             }
             Location = new Point(x, y);
         }
@@ -223,13 +233,16 @@ namespace QuotaFloat
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            ApplyCaptureVisibility();
+            SyncDisplayTiming();
             uiTimer.Start();
             barTimer.Start();
             if (demoMode) ApplyDemo();
             else StartFetch();
 
             bool startupDocked = false;
-            if (cfg.EdgeHide && cfg.EdgeDock >= 1 && cfg.EdgeDock <= 4)
+            if (cfg.EdgeHide && cfg.EdgeDock >= EdgeMetrics.DockLeft &&
+                cfg.EdgeDock <= EdgeMetrics.DockBottom)
             {
                 Rectangle wa = Screen.FromControl(this).WorkingArea;
                 Location = EdgeLocation(cfg.EdgeDock, cfg.EdgeAnchor, wa);
@@ -238,8 +251,8 @@ namespace QuotaFloat
             }
             else
             {
-                dockedEdge = cfg.EdgeHide ? DockEdge() : 0;
-                if (dockedEdge != 0)
+                dockedEdge = cfg.EdgeHide ? DockEdge() : EdgeMetrics.DockNone;
+                if (dockedEdge != EdgeMetrics.DockNone)
                 {
                     Location = VisibleLocation();
                     startupDocked = true;
@@ -251,13 +264,14 @@ namespace QuotaFloat
             lastInside = now;
             hiddenHoverStart = DateTime.MinValue;
             hideNotBefore = startupDocked
-                ? now.AddMilliseconds(StartupHideDelay)
+                ? now.AddMilliseconds(Timing.StartupHideDelayMilliseconds)
                 : DateTime.MinValue;
             if (startupDocked)
             {
                 SaveDockState();
                 cfg.Save();
             }
+            SyncHighResolutionTimer();
             edgeTimer.Start();
             foreach (string arg in Environment.GetCommandLineArgs())
             {
@@ -271,8 +285,8 @@ namespace QuotaFloat
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (editingField != 0) EndEdit(true);
-            Point save = dockedEdge != 0 ? VisibleLocation() : Location;
+            if (editingField != UiMetrics.EquationFieldNone) EndEdit(true);
+            Point save = dockedEdge != EdgeMetrics.DockNone ? VisibleLocation() : Location;
             cfg.X = save.X;
             cfg.Y = save.Y;
             cfg.WindowWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, ClientSize.Width));
@@ -284,6 +298,7 @@ namespace QuotaFloat
             barTimer.Stop();
             edgeTimer.Stop();
             slideTimer.Stop();
+            SetHighResolutionTimer(false);
             base.OnFormClosing(e);
         }
 
@@ -305,12 +320,55 @@ namespace QuotaFloat
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
-                        lastFetch = DateTime.MinValue;
+                        lastFetchStamp = Timing.NoStamp;
                         StartFetch();
                     }
                 }
             }
             finally { refreshingPaused = false; }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyCaptureVisibility();
+        }
+
+        private void ApplyCaptureVisibility()
+        {
+            if (!IsHandleCreated) return;
+            uint affinity = cfg.HideFromCapture ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
+            captureExcluded = SetWindowDisplayAffinity(Handle, affinity);
+        }
+
+        private void SyncDisplayTiming()
+        {
+            if (!IsHandleCreated) return;
+            Screen screen = Screen.FromControl(this);
+            displayRefreshHz = DisplayTiming.HighestRefreshHz(screen);
+            int interval = DisplayTiming.FrameIntervalMilliseconds(displayRefreshHz);
+            if (barTimer == null || slideTimer == null) return;
+            if (interval == frameIntervalMilliseconds) return;
+            frameIntervalMilliseconds = interval;
+            barTimer.Interval = interval;
+            slideTimer.Interval = interval;
+        }
+
+        private void SetHighResolutionTimer(bool enabled)
+        {
+            if (enabled == highResolutionTimer) return;
+            if (enabled)
+                highResolutionTimer = DisplayTiming.BeginHighResolutionTimer();
+            else
+            {
+                DisplayTiming.EndHighResolutionTimer();
+                highResolutionTimer = false;
+            }
+        }
+
+        private void SyncHighResolutionTimer()
+        {
+            SetHighResolutionTimer(!edgeHidden || slideAnimating || !cfg.EdgeHide);
         }
     }
 }

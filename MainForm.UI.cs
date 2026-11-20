@@ -21,15 +21,16 @@ namespace QuotaFloat
         private void ValueMouseDown(int field)
         {
             if (!cfg.EquationEnabled || !equationPanel.Visible) return;
-            if (editingField != 0)
+            if (editingField != UiMetrics.EquationFieldNone)
             {
                 EndEdit(true);
                 return;
             }
             DateTime now = DateTime.UtcNow;
-            if (lastValueField == field && (now - lastValueClick).TotalMilliseconds <= 700)
+            if (lastValueField == field &&
+                (now - lastValueClick).TotalMilliseconds <= Timing.ValueClickWindowMilliseconds)
             {
-                lastValueField = 0;
+                lastValueField = UiMetrics.EquationFieldNone;
                 BeginEdit(field);
             }
             else
@@ -42,8 +43,8 @@ namespace QuotaFloat
         private void BeginEdit(int field)
         {
             if (!cfg.EquationEnabled || !equationPanel.Visible) return;
-            if (!lastDeepSeekBalanceKnown || editingField != 0) return;
-            Label target = field == 1 ? spentLabel : totalLabel;
+            if (!lastDeepSeekBalanceKnown || editingField != UiMetrics.EquationFieldNone) return;
+            Label target = field == UiMetrics.EquationFieldSpent ? spentLabel : totalLabel;
             editingField = field;
             inlineEditor.Bounds = target.Bounds;
             inlineEditor.Text = target.Text == "—" ? "" : target.Text;
@@ -71,14 +72,14 @@ namespace QuotaFloat
 
         private void EndEdit(bool commit)
         {
-            if (editingField == 0) return;
+            if (editingField == UiMetrics.EquationFieldNone) return;
             int field = editingField;
-            editingField = 0;
+            editingField = UiMetrics.EquationFieldNone;
 
             if (commit && lastDeepSeekBalanceKnown)
             {
                 string text = inlineEditor.Text.Trim();
-                if (field == 2)
+                if (field == UiMetrics.EquationFieldTotal)
                 {
                     if (text.Length == 0)
                     {
@@ -158,13 +159,13 @@ namespace QuotaFloat
                 if (s < 0m) s = 0m;
                 spentLabel.Text = s.ToString("0.00", CultureInfo.InvariantCulture);
                 totalLabel.Text = cfg.DeepSeekTotal.ToString("0.00", CultureInfo.InvariantCulture);
-                dsBar.Percent = cfg.DeepSeekTotal > 0m ? (float)(lastDeepSeekBalance * 100m / cfg.DeepSeekTotal) : 0f;
+                dsBar.Percent = cfg.DeepSeekTotal > 0m ? (float)(lastDeepSeekBalance * UiMetrics.PercentMax / cfg.DeepSeekTotal) : 0f;
             }
             else
             {
                 spentLabel.Text = "0";
                 totalLabel.Text = lastDeepSeekBalance.ToString("0.00", CultureInfo.InvariantCulture);
-                dsBar.Percent = lastDeepSeekBalance > 0m ? 100f : 0f;
+                dsBar.Percent = lastDeepSeekBalance > 0m ? UiMetrics.PercentMax : 0f;
             }
             dsBar.Invalidate();
             LayoutEquation();
@@ -179,8 +180,8 @@ namespace QuotaFloat
         // ---------- 主题 ----------
         private bool ResolveLightTheme()
         {
-            if (cfg.ThemeMode == 1) return true;
-            if (cfg.ThemeMode == 2) return false;
+            if (cfg.ThemeMode == AppConfig.ThemeLight) return true;
+            if (cfg.ThemeMode == AppConfig.ThemeDark) return false;
             return IsSystemLightTheme();
         }
 
@@ -200,7 +201,8 @@ namespace QuotaFloat
         {
             cfg.ThemeMode = mode;
             cfg.Save();
-            ApplyTheme(mode == 0 ? IsSystemLightTheme() : mode == 1);
+            ApplyTheme(mode == AppConfig.ThemeFollowSystem
+                ? IsSystemLightTheme() : mode == AppConfig.ThemeLight);
         }
 
         private void ApplyTheme(bool light)
@@ -316,7 +318,7 @@ namespace QuotaFloat
 
             if (!demoMode)
             {
-                lastFetch = DateTime.MinValue;
+                lastFetchStamp = Timing.NoStamp;
                 StartFetch();
             }
             Invalidate(true);
@@ -356,33 +358,38 @@ namespace QuotaFloat
         // ---------- 调试 ----------
         private void ApplyDemo()
         {
-            lastFetch = DateTime.Now;
-            lastDeepSeekBalance = 123.45m;
+            lastFetchStamp = clock.ElapsedTicks;
+            lastDeepSeekBalance = DemoData.DeepSeekBalance;
             lastDeepSeekCurrency = "CNY";
             lastDeepSeekBalanceKnown = true;
-            cfg.DeepSeekTotal = 200m;
+            cfg.DeepSeekTotal = DemoData.DeepSeekTotal;
             cfg.DeepSeekHasTotal = true;
             UpdateDisplay();
 
             row5h.Configured = true;
             row5h.Error = "";
             row5h.RateLimited = false;
-            row5h.Remaining = 76;
-            row5h.ResetsAt = DateTimeOffset.Now.AddHours(3).AddMinutes(12).AddSeconds(45);
+            row5h.Remaining = DemoData.FiveHourRemaining;
+            row5h.ResetsAt = DateTimeOffset.Now.AddHours(DemoData.FiveHourResetHours)
+                .AddMinutes(DemoData.FiveHourResetMinutes)
+                .AddSeconds(DemoData.FiveHourResetSeconds);
             row5h.Invalidate();
 
             rowWeek.Configured = true;
             rowWeek.Error = "";
             rowWeek.RateLimited = false;
-            rowWeek.Remaining = 59;
-            rowWeek.ResetsAt = DateTimeOffset.Now.AddDays(4).AddHours(8).AddMinutes(30);
+            rowWeek.Remaining = DemoData.WeekRemaining;
+            rowWeek.ResetsAt = DateTimeOffset.Now.AddDays(DemoData.WeekResetDays)
+                .AddHours(DemoData.WeekResetHours)
+                .AddMinutes(DemoData.WeekResetMinutes);
             rowWeek.Invalidate();
 
             rowMonth.Configured = true;
             rowMonth.Error = "";
             rowMonth.RateLimited = false;
-            rowMonth.Remaining = 37;
-            rowMonth.ResetsAt = DateTimeOffset.Now.AddDays(22).AddHours(6);
+            rowMonth.Remaining = DemoData.MonthRemaining;
+            rowMonth.ResetsAt = DateTimeOffset.Now.AddDays(DemoData.MonthResetDays)
+                .AddHours(DemoData.MonthResetHours);
             rowMonth.Invalidate();
 
             UpdatePeakBadge();
@@ -399,12 +406,15 @@ namespace QuotaFloat
 
         private static bool IsPeakNow()
         {
-            DateTimeOffset beijing = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(8));
+            DateTimeOffset beijing = DateTimeOffset.UtcNow.ToOffset(
+                TimeSpan.FromHours(PeakTime.BeijingUtcOffsetHours));
             DayOfWeek day = beijing.DayOfWeek;
             if (day == DayOfWeek.Saturday || day == DayOfWeek.Sunday) return false;
             TimeSpan time = beijing.TimeOfDay;
-            return (time >= TimeSpan.FromHours(9) && time < TimeSpan.FromHours(12))
-                || (time >= TimeSpan.FromHours(14) && time < TimeSpan.FromHours(18));
+            return (time >= TimeSpan.FromHours(PeakTime.MorningStartHour) &&
+                    time < TimeSpan.FromHours(PeakTime.MorningEndHour))
+                || (time >= TimeSpan.FromHours(PeakTime.AfternoonStartHour) &&
+                    time < TimeSpan.FromHours(PeakTime.AfternoonEndHour));
         }
 
         private void AttachDrag(Control c)

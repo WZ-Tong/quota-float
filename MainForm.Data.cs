@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -18,10 +19,42 @@ namespace QuotaFloat
     internal sealed partial class MainForm
     {
         // ---------- 数据获取 ----------
+        private int CurrentRefreshSeconds()
+        {
+            return edgeHidden ? Timing.HiddenRefreshSeconds : Timing.VisibleRefreshSeconds;
+        }
+
+        private double SecondsSinceFetch()
+        {
+            if (lastFetchStamp == Timing.NoStamp) return double.MaxValue;
+            return ElapsedSeconds(lastFetchStamp);
+        }
+
+        private double ElapsedSeconds(long stamp)
+        {
+            if (stamp == Timing.NoStamp) return 0.0;
+            return (clock.ElapsedTicks - stamp) / (double)Stopwatch.Frequency;
+        }
+
+        private double ElapsedMilliseconds(long stamp)
+        {
+            return ElapsedSeconds(stamp) * Timing.MillisecondsPerSecond;
+        }
+
+        private void RefreshIfStaleOnReveal()
+        {
+            if (demoMode || refreshingPaused || fetching) return;
+            if (SecondsSinceFetch() >= Timing.RevealRefreshMinAgeSeconds) StartFetch();
+        }
+
         private void StartFetch()
         {
             if (fetching) return;
             fetching = true;
+            fetchStartStamp = clock.ElapsedTicks;
+            refreshBar.Indeterminate = true;
+            refreshBar.Phase = 0f;
+            refreshBar.Invalidate();
 
             string dsKey = cfg.DeepSeekKey;
             string goKey = cfg.OpenCodeKey;
@@ -60,12 +93,15 @@ namespace QuotaFloat
         {
             if (IsDisposed) return;
             fetching = false;
-            lastFetch = DateTime.Now;
+            lastFetchStamp = clock.ElapsedTicks;
+            fetchStartStamp = Timing.NoStamp;
+            refreshBar.Indeterminate = false;
+            refreshBar.Invalidate();
 
             DeepSeekState ds = r.DeepSeek;
             if (!ds.Configured)
             {
-                if (editingField != 0) EndEdit(false);
+                if (editingField != UiMetrics.EquationFieldNone) EndEdit(false);
                 lastDeepSeekBalanceKnown = false;
                 deepSeekStatus.Text = Strings.NotConfiguredHint;
                 deepSeekStatus.ForeColor = Palette.Sub;
@@ -73,7 +109,7 @@ namespace QuotaFloat
             }
             else if (!ds.Ok)
             {
-                if (editingField != 0) EndEdit(false);
+                if (editingField != UiMetrics.EquationFieldNone) EndEdit(false);
                 lastDeepSeekBalanceKnown = false;
                 deepSeekStatus.Text = ds.Error;
                 deepSeekStatus.ForeColor = Palette.Red;
@@ -93,7 +129,7 @@ namespace QuotaFloat
                     : 0m;
                 cfg.Save();
 
-                if (editingField != 0 && cfg.EquationEnabled)
+                if (editingField != UiMetrics.EquationFieldNone && cfg.EquationEnabled)
                 {
                     string sym = CurrencySymbol(ds.Currency);
                     deepSeekBalance.Text = sym + " " + ds.Total.ToString("0.00", CultureInfo.InvariantCulture);
@@ -124,7 +160,8 @@ namespace QuotaFloat
             row.Error = go.Ok ? "" : go.Error;
             row.RateLimited = go.Ok && w.RateLimited;
             row.ResetsAt = go.Ok ? w.ResetsAt : null;
-            row.Remaining = go.Ok && w.HasData && !w.RateLimited ? Math.Max(0, 100 - w.Used) : -1;
+            row.Remaining = go.Ok && w.HasData && !w.RateLimited
+                ? Math.Max(0, UiMetrics.PercentMax - w.Used) : -1;
             if (go.Ok && w.RateLimited) row.Remaining = 0;
             row.Invalidate();
         }
@@ -193,7 +230,7 @@ namespace QuotaFloat
                 catch (Exception ex)
                 {
                     last = ex;
-                    if (status != 404) break;
+                    if (status != (int)HttpStatusCode.NotFound) break;
                 }
             }
             if (json == null)
@@ -230,12 +267,14 @@ namespace QuotaFloat
             if (d == null) return w;
             w.HasData = true;
             if (d.ContainsKey("percent"))
-                w.Used = (int)Math.Round(Math.Max(0, Math.Min(100, GetDouble(d, "percent"))));
+                w.Used = (int)Math.Round(Math.Max(0, Math.Min(UiMetrics.PercentMax,
+                    GetDouble(d, "percent"))));
             else if (d.ContainsKey("used") && d.ContainsKey("limit"))
             {
                 double limit = GetDouble(d, "limit");
                 if (limit > 0)
-                    w.Used = (int)Math.Round(Math.Max(0, Math.Min(100, GetDouble(d, "used") * 100.0 / limit)));
+                    w.Used = (int)Math.Round(Math.Max(0, Math.Min(UiMetrics.PercentMax,
+                        GetDouble(d, "used") * UiMetrics.PercentMax / limit)));
             }
             if (d.ContainsKey("status"))
                 w.RateLimited = string.Equals(GetString(d, "status"), "rate-limited", StringComparison.OrdinalIgnoreCase);
@@ -263,8 +302,8 @@ namespace QuotaFloat
             req.UserAgent = "QuotaFloat/1.0";
             req.Headers["Authorization"] = "Bearer " + key;
             req.Accept = "application/json";
-            req.Timeout = 12000;
-            req.ReadWriteTimeout = 12000;
+            req.Timeout = Timing.NetworkTimeoutMilliseconds;
+            req.ReadWriteTimeout = Timing.NetworkTimeoutMilliseconds;
             try
             {
                 using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
@@ -284,10 +323,10 @@ namespace QuotaFloat
 
         private static string MapError(int status, Exception ex)
         {
-            if (status == 401) return Strings.InvalidKey(status);
-            if (status == 402) return Strings.InsufficientBalance(status);
-            if (status == 403) return Strings.Forbidden(status);
-            if (status == 429) return Strings.TooManyRequests(status);
+            if (status == (int)HttpStatusCode.Unauthorized) return Strings.InvalidKey(status);
+            if (status == (int)HttpStatusCode.PaymentRequired) return Strings.InsufficientBalance(status);
+            if (status == (int)HttpStatusCode.Forbidden) return Strings.Forbidden(status);
+            if (status == NetworkMetrics.TooManyRequestsStatus) return Strings.TooManyRequests(status);
             if (status > 0) return "HTTP " + status.ToString(CultureInfo.InvariantCulture);
             WebException we = ex as WebException;
             if (we != null)

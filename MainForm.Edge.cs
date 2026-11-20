@@ -26,30 +26,30 @@ namespace QuotaFloat
             int dt = Math.Max(0, Top - wa.Top);
             int db = Math.Max(0, wa.Bottom - Bottom);
             int min = Math.Min(Math.Min(dl, dr), Math.Min(dt, db));
-            if (min > DockTolerance) return 0;
-            if (min == dl) return 1;
-            if (min == dr) return 2;
-            if (min == dt) return 3;
-            return 4;
+            if (min > EdgeMetrics.DockTolerance) return EdgeMetrics.DockNone;
+            if (min == dl) return EdgeMetrics.DockLeft;
+            if (min == dr) return EdgeMetrics.DockRight;
+            if (min == dt) return EdgeMetrics.DockTop;
+            return EdgeMetrics.DockBottom;
         }
 
         private Point VisibleLocation()
         {
             Rectangle wa = Screen.FromControl(this).WorkingArea;
-            if (dockedEdge == 1) return new Point(wa.Left, Top);
-            if (dockedEdge == 2) return new Point(wa.Right - Width, Top);
-            if (dockedEdge == 3) return new Point(Left, wa.Top);
-            if (dockedEdge == 4) return new Point(Left, wa.Bottom - Height);
+            if (dockedEdge == EdgeMetrics.DockLeft) return new Point(wa.Left, Top);
+            if (dockedEdge == EdgeMetrics.DockRight) return new Point(wa.Right - Width, Top);
+            if (dockedEdge == EdgeMetrics.DockTop) return new Point(Left, wa.Top);
+            if (dockedEdge == EdgeMetrics.DockBottom) return new Point(Left, wa.Bottom - Height);
             return Location;
         }
 
         private Point HiddenLocation()
         {
             Rectangle wa = Screen.FromControl(this).WorkingArea;
-            if (dockedEdge == 1) return new Point(wa.Left - Width + EdgeStrip, Top);
-            if (dockedEdge == 2) return new Point(wa.Right - EdgeStrip, Top);
-            if (dockedEdge == 3) return new Point(Left, wa.Top - Height + EdgeStrip);
-            if (dockedEdge == 4) return new Point(Left, wa.Bottom - EdgeStrip);
+            if (dockedEdge == EdgeMetrics.DockLeft) return new Point(wa.Left - Width + EdgeMetrics.Strip, Top);
+            if (dockedEdge == EdgeMetrics.DockRight) return new Point(wa.Right - EdgeMetrics.Strip, Top);
+            if (dockedEdge == EdgeMetrics.DockTop) return new Point(Left, wa.Top - Height + EdgeMetrics.Strip);
+            if (dockedEdge == EdgeMetrics.DockBottom) return new Point(Left, wa.Bottom - EdgeMetrics.Strip);
             return Location;
         }
 
@@ -57,14 +57,14 @@ namespace QuotaFloat
         {
             int x = Left;
             int y = Top;
-            if (edge == 1 || edge == 2)
+            if (edge == EdgeMetrics.DockLeft || edge == EdgeMetrics.DockRight)
             {
-                x = edge == 1 ? wa.Left : wa.Right - Width;
+                x = edge == EdgeMetrics.DockLeft ? wa.Left : wa.Right - Width;
                 y = wa.Top + (int)Math.Round(anchor * wa.Height) - Height / 2;
             }
             else
             {
-                y = edge == 3 ? wa.Top : wa.Bottom - Height;
+                y = edge == EdgeMetrics.DockTop ? wa.Top : wa.Bottom - Height;
                 x = wa.Left + (int)Math.Round(anchor * wa.Width) - Width / 2;
             }
             if (x < wa.Left) x = wa.Left;
@@ -77,20 +77,20 @@ namespace QuotaFloat
         private double EdgeAnchorFor(int edge, Rectangle wa)
         {
             double anchor;
-            if (edge == 1 || edge == 2)
+            if (edge == EdgeMetrics.DockLeft || edge == EdgeMetrics.DockRight)
                 anchor = (Top + Height / 2.0 - wa.Top) / Math.Max(1.0, wa.Height);
             else
                 anchor = (Left + Width / 2.0 - wa.Left) / Math.Max(1.0, wa.Width);
-            if (anchor < 0.02) anchor = 0.02;
-            if (anchor > 0.98) anchor = 0.98;
+            if (anchor < EdgeMetrics.AnchorMin) anchor = EdgeMetrics.AnchorMin;
+            if (anchor > EdgeMetrics.AnchorMax) anchor = EdgeMetrics.AnchorMax;
             return anchor;
         }
 
         private void SaveDockState()
         {
-            if (dockedEdge == 0)
+            if (dockedEdge == EdgeMetrics.DockNone)
             {
-                cfg.EdgeDock = 0;
+                cfg.EdgeDock = EdgeMetrics.DockNone;
                 return;
             }
             Rectangle wa = Screen.FromControl(this).WorkingArea;
@@ -100,8 +100,8 @@ namespace QuotaFloat
 
         private void TickEdge()
         {
-            if (!cfg.EdgeHide || dockedEdge == 0) return;
-            if (menu.Visible || refreshingPaused || editingField != 0 || resizing)
+            if (!cfg.EdgeHide || dockedEdge == EdgeMetrics.DockNone) return;
+            if (menu.Visible || refreshingPaused || editingField != UiMetrics.EquationFieldNone || resizing)
             {
                 lastInside = DateTime.UtcNow;
                 hiddenHoverStart = DateTime.MinValue;
@@ -118,7 +118,7 @@ namespace QuotaFloat
                 if (edgeHidden)
                 {
                     if (hiddenHoverStart == DateTime.MinValue) hiddenHoverStart = now;
-                    if ((now - hiddenHoverStart).TotalMilliseconds >= ShowDelay) ShowEdge();
+                    if ((now - hiddenHoverStart).TotalMilliseconds >= Timing.ShowDelayMilliseconds) ShowEdge();
                 }
                 else
                 {
@@ -131,7 +131,7 @@ namespace QuotaFloat
                 if (edgeArmed && !edgeHidden)
                 {
                     if (now >= hideNotBefore &&
-                        (now - lastInside).TotalMilliseconds >= HideDelay)
+                        (now - lastInside).TotalMilliseconds >= Timing.HideDelayMilliseconds)
                         HideEdge();
                 }
             }
@@ -139,8 +139,9 @@ namespace QuotaFloat
 
         private void StartSlide(bool hide)
         {
-            if (dockedEdge == 0) return;
+            if (dockedEdge == EdgeMetrics.DockNone) return;
             if (hide && !cfg.EdgeHide) return;
+            SetHighResolutionTimer(true);
             hiddenHoverStart = DateTime.MinValue;
             Point target = hide ? HiddenLocation() : VisibleLocation();
             if (Location == target)
@@ -162,7 +163,7 @@ namespace QuotaFloat
             slideTo = target;
             slideOutTarget = hide;
             slideAnimating = true;
-            slideStartTick = Environment.TickCount;
+            slideStartStamp = clock.ElapsedTicks;
             hintFrom = hintAlpha;
             hintTo = hide ? 1f : 0f;
             if (!hide)
@@ -177,6 +178,7 @@ namespace QuotaFloat
         private void ShowEdge()
         {
             StartSlide(false);
+            RefreshIfStaleOnReveal();
         }
 
         private void HideEdge()
@@ -191,8 +193,8 @@ namespace QuotaFloat
                 slideTimer.Stop();
                 return;
             }
-            int elapsed = Environment.TickCount - slideStartTick;
-            float t = (float)elapsed / SlideDuration;
+            double elapsed = ElapsedMilliseconds(slideStartStamp);
+            float t = (float)(elapsed / Timing.SlideDurationMilliseconds);
             if (t >= 1f)
             {
                 Location = slideTo;
@@ -201,6 +203,7 @@ namespace QuotaFloat
                 edgeHidden = slideOutTarget;
                 hintAlpha = hintTo;
                 if (!edgeHidden) lastInside = DateTime.UtcNow;
+                SyncHighResolutionTimer();
                 Invalidate();
                 return;
             }
@@ -219,7 +222,7 @@ namespace QuotaFloat
                 slideTimer.Stop();
                 slideAnimating = false;
                 slideOutTarget = false;
-                if (dockedEdge != 0)
+                if (dockedEdge != EdgeMetrics.DockNone)
                 {
                     Location = VisibleLocation();
                     edgeHidden = false;
@@ -228,6 +231,7 @@ namespace QuotaFloat
                 hideNotBefore = DateTime.MinValue;
                 hintAlpha = 0f;
                 edgeTimer.Stop();
+                SyncHighResolutionTimer();
                 Invalidate();
                 return;
             }
@@ -236,19 +240,20 @@ namespace QuotaFloat
             edgeHidden = false;
             hiddenHoverStart = DateTime.MinValue;
             hideNotBefore = DateTime.MinValue;
-            if (dockedEdge != 0)
+            if (dockedEdge != EdgeMetrics.DockNone)
             {
                 Location = VisibleLocation();
                 edgeArmed = true;
                 lastInside = DateTime.UtcNow;
                 edgeTimer.Start();
             }
+            SyncHighResolutionTimer();
             Invalidate();
         }
 
         private void EnsureEdgeVisible()
         {
-            if (dockedEdge == 0) return;
+            if (dockedEdge == EdgeMetrics.DockNone) return;
             if (!edgeHidden && !(slideAnimating && slideOutTarget)) return;
             slideTimer.Stop();
             slideAnimating = false;
@@ -259,13 +264,15 @@ namespace QuotaFloat
             hintAlpha = 0f;
             Location = VisibleLocation();
             lastInside = DateTime.UtcNow;
+            SyncHighResolutionTimer();
             Invalidate();
         }
 
         private void ApplyRoundedRegion()
         {
             if (Width <= 0 || Height <= 0) return;
-            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height), 12))
+            using (GraphicsPath p = Ui.Rounded(new Rectangle(0, 0, Width, Height),
+                UiMetrics.WindowCornerRadius))
             {
                 Region old = Region;
                 Region = new Region(p);
@@ -287,15 +294,15 @@ namespace QuotaFloat
         private int EdgeDisplayPercent()
         {
             if (HasOpenCodeEdgeUsage())
-                return row5h.RateLimited ? 0 : Math.Max(0, Math.Min(100, row5h.Remaining));
+                return row5h.RateLimited ? 0 : Math.Max(0, Math.Min(UiMetrics.PercentMax, row5h.Remaining));
             if (HasDeepSeekEdgeUsage())
             {
                 float remaining;
                 if (cfg.DeepSeekHasTotal && cfg.DeepSeekTotal > 0m)
-                    remaining = (float)(lastDeepSeekBalance * 100m / cfg.DeepSeekTotal);
+                    remaining = (float)(lastDeepSeekBalance * UiMetrics.PercentMax / cfg.DeepSeekTotal);
                 else
-                    remaining = lastDeepSeekBalance > 0m ? 100f : 0f;
-                return Math.Max(0, Math.Min(100, (int)Math.Round(remaining)));
+                    remaining = lastDeepSeekBalance > 0m ? UiMetrics.PercentMax : 0f;
+                return Math.Max(0, Math.Min(UiMetrics.PercentMax, (int)Math.Round(remaining)));
             }
             return -1;
         }
@@ -310,47 +317,48 @@ namespace QuotaFloat
 
         private void PaintEdgeHint(Graphics g)
         {
-            if (!cfg.EdgeHide || dockedEdge == 0 || hintAlpha <= 0.01f) return;
-            int a = (int)Math.Round(255f * Math.Max(0f, Math.Min(1f, hintAlpha)));
+            if (!cfg.EdgeHide || dockedEdge == EdgeMetrics.DockNone || hintAlpha <= EdgeMetrics.HintVisibleThreshold) return;
+            int a = (int)Math.Round(EdgeMetrics.ColorAlphaMax *
+                Math.Max(0f, Math.Min(1f, hintAlpha)));
             if (a <= 0) return;
 
             int pct = EdgeDisplayPercent();
-            int len = 56;
-            int thick = 4;
+            int len = EdgeMetrics.HintLength;
+            int thick = EdgeMetrics.HintThickness;
             int x = 0;
             int y = 0;
             int w = 0;
             int h = 0;
-            bool vertical = dockedEdge == 1 || dockedEdge == 2;
-            if (dockedEdge == 2)
+            bool vertical = dockedEdge == EdgeMetrics.DockLeft || dockedEdge == EdgeMetrics.DockRight;
+            if (dockedEdge == EdgeMetrics.DockRight)
             {
-                len = Math.Max(8, Height - 24);
-                x = 3;
+                len = Math.Max(EdgeMetrics.HintMinLength, Height - EdgeMetrics.HintEndInset);
+                x = EdgeMetrics.HintEdgeInset;
                 y = (Height - len) / 2;
                 w = thick;
                 h = len;
             }
-            else if (dockedEdge == 1)
+            else if (dockedEdge == EdgeMetrics.DockLeft)
             {
-                len = Math.Max(8, Height - 24);
-                x = Width - 7;
+                len = Math.Max(EdgeMetrics.HintMinLength, Height - EdgeMetrics.HintEndInset);
+                x = Width - EdgeMetrics.HintOppositeInset;
                 y = (Height - len) / 2;
                 w = thick;
                 h = len;
             }
-            else if (dockedEdge == 4)
+            else if (dockedEdge == EdgeMetrics.DockBottom)
             {
-                len = Math.Max(8, Width - 24);
+                len = Math.Max(EdgeMetrics.HintMinLength, Width - EdgeMetrics.HintEndInset);
                 x = (Width - len) / 2;
-                y = 3;
+                y = EdgeMetrics.HintEdgeInset;
                 w = len;
                 h = thick;
             }
             else
             {
-                len = Math.Max(8, Width - 24);
+                len = Math.Max(EdgeMetrics.HintMinLength, Width - EdgeMetrics.HintEndInset);
                 x = (Width - len) / 2;
-                y = Height - 7;
+                y = Height - EdgeMetrics.HintOppositeInset;
                 w = len;
                 h = thick;
             }
@@ -364,17 +372,19 @@ namespace QuotaFloat
             int gridStep;
             if (vertical)
             {
-                segments = 4;
-                gap = 3;
+                segments = EdgeMetrics.VerticalSegments;
+                gap = EdgeMetrics.VerticalGap;
                 gridStep = 0;
             }
             else
             {
-                segments = len >= 400 ? 10 : 5;
-                gap = 5;
-                gridStep = segments == 10 ? 5 : 10;
+                segments = len >= EdgeMetrics.HorizontalLongThreshold
+                    ? EdgeMetrics.HorizontalLongSegments : EdgeMetrics.HorizontalShortSegments;
+                gap = EdgeMetrics.HorizontalGap;
+                gridStep = segments == EdgeMetrics.HorizontalLongSegments
+                    ? EdgeMetrics.HorizontalLongGrid : EdgeMetrics.HorizontalShortGrid;
             }
-            double step = 100.0 / segments;
+            double step = (double)UiMetrics.PercentMax / segments;
             int usable = len - gap * (segments - 1);
             if (usable < segments)
             {
@@ -385,12 +395,13 @@ namespace QuotaFloat
             int used = segLen * segments + gap * (segments - 1);
             int origin = (vertical ? y : x) + (len - used) / 2;
             int bottom = origin + used;
-            int subDivisions = gridStep > 0 ? (100 / segments) / gridStep : 1;
+            int subDivisions = gridStep > 0 ? (UiMetrics.PercentMax / segments) / gridStep : 1;
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(215, Palette.Bg), 3f))
+            using (Pen subTick = new Pen(Color.FromArgb(EdgeMetrics.SubTickAlpha, Palette.Bg),
+                EdgeMetrics.SubTickWidth))
             {
                 for (int i = 0; i < segments; i++)
                 {
@@ -406,7 +417,7 @@ namespace QuotaFloat
                         track = new Rectangle(blockLeft, y, segLen, thick);
                     }
 
-                    using (GraphicsPath tp = Ui.Rounded(track, 2))
+                    using (GraphicsPath tp = Ui.Rounded(track, EdgeMetrics.SegmentRadius))
                         g.FillPath(tb, tp);
 
                     double fraction = Math.Max(0.0, Math.Min(1.0, (pct - i * step) / step));
@@ -422,11 +433,11 @@ namespace QuotaFloat
                         else
                             fill = new Rectangle(track.X, y, fillLen, thick);
 
-                        using (GraphicsPath fp = Ui.Rounded(fill, 2))
+                        using (GraphicsPath fp = Ui.Rounded(fill, EdgeMetrics.SegmentRadius))
                             g.FillPath(fb, fp);
                     }
 
-                    if (segLen >= 8)
+                    if (segLen >= EdgeMetrics.SegmentMinLengthForTicks)
                     {
                         for (int j = 1; j < subDivisions; j++)
                         {
@@ -434,13 +445,15 @@ namespace QuotaFloat
                             {
                                 int pos = track.Bottom -
                                     (int)Math.Round(track.Height * (double)j / subDivisions);
-                                g.DrawLine(subTick, x + 1, pos, x + thick - 2, pos);
+                                g.DrawLine(subTick, x + EdgeMetrics.SubTickInset, pos,
+                                    x + thick - EdgeMetrics.SubTickEndInset, pos);
                             }
                             else
                             {
                                 int pos = track.X +
                                     (int)Math.Round(track.Width * (double)j / subDivisions);
-                                g.DrawLine(subTick, pos, y + 1, pos, y + thick - 2);
+                                g.DrawLine(subTick, pos, y + EdgeMetrics.SubTickInset,
+                                    pos, y + thick - EdgeMetrics.SubTickEndInset);
                             }
                         }
                     }

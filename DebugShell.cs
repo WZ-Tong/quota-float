@@ -129,11 +129,11 @@ namespace QuotaFloat
 
         private static bool TryEdge(string value, out int edge)
         {
-            edge = 0;
-            if (value.Equals("left", StringComparison.OrdinalIgnoreCase)) { edge = 1; return true; }
-            if (value.Equals("right", StringComparison.OrdinalIgnoreCase)) { edge = 2; return true; }
-            if (value.Equals("top", StringComparison.OrdinalIgnoreCase)) { edge = 3; return true; }
-            if (value.Equals("bottom", StringComparison.OrdinalIgnoreCase)) { edge = 4; return true; }
+            edge = EdgeMetrics.DockNone;
+            if (value.Equals("left", StringComparison.OrdinalIgnoreCase)) { edge = EdgeMetrics.DockLeft; return true; }
+            if (value.Equals("right", StringComparison.OrdinalIgnoreCase)) { edge = EdgeMetrics.DockRight; return true; }
+            if (value.Equals("top", StringComparison.OrdinalIgnoreCase)) { edge = EdgeMetrics.DockTop; return true; }
+            if (value.Equals("bottom", StringComparison.OrdinalIgnoreCase)) { edge = EdgeMetrics.DockBottom; return true; }
             return false;
         }
     }

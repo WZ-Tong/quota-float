@@ -67,17 +67,53 @@ try {
         Write-Host $err
         throw "Expected at least 6 status lines, got $($lines.Count)."
     }
+    if ($lines[0] -notmatch "hz=[1-9][0-9]*") {
+        Write-Host $out
+        throw "Display refresh rate was not detected: $($lines[0])"
+    }
+    if ($lines[0] -notmatch "frame=[0-9]+") {
+        Write-Host $out
+        throw "Frame interval was not reported: $($lines[0])"
+    }
+    if ($lines[0] -notmatch "capture=excluded") {
+        Write-Host $out
+        throw "Capture exclusion is not active: $($lines[0])"
+    }
     if ($lines[1] -notmatch "dock=2") {
         Write-Host $out
         throw "Dock right failed: $($lines[1])"
+    }
+    if ($lines[1] -notmatch "interval=120") {
+        Write-Host $out
+        throw "Visible refresh interval is not 120s: $($lines[1])"
+    }
+    if ($lines[1] -notmatch "highres=on") {
+        Write-Host $out
+        throw "High-resolution timing is not active while visible: $($lines[1])"
     }
     if ($lines[2] -notmatch "hidden=True") {
         Write-Host $out
         throw "Hide failed: $($lines[2])"
     }
+    if ($lines[2] -notmatch "interval=600") {
+        Write-Host $out
+        throw "Hidden refresh interval is not 600s: $($lines[2])"
+    }
+    if ($lines[2] -notmatch "highres=off") {
+        Write-Host $out
+        throw "High-resolution timing is still active while hidden: $($lines[2])"
+    }
     if ($lines[3] -notmatch "hidden=False") {
         Write-Host $out
         throw "Show failed: $($lines[3])"
+    }
+    if ($lines[3] -notmatch "interval=120") {
+        Write-Host $out
+        throw "Revealed refresh interval is not 120s: $($lines[3])"
+    }
+    if ($lines[3] -notmatch "highres=on") {
+        Write-Host $out
+        throw "High-resolution timing did not resume on reveal: $($lines[3])"
     }
     if ($lines[4] -notmatch "lang=en") {
         Write-Host $out

@@ -60,15 +60,23 @@ namespace QuotaFloat
         }
 
         public static string RefreshNow { get { return T("立即刷新", "Refresh now"); } }
+        public static string RefreshNowTip { get { return T("立即查询已启用的服务", "Query enabled services now"); } }
         public static string ShowEquation { get { return T("显示余额等式", "Show balance equation"); } }
+        public static string ShowEquationTip { get { return T("在 DeepSeek 卡片中显示余额等式", "Show the balance equation in the DeepSeek card"); } }
         public static string ShowDeepSeek { get { return T("显示 DeepSeek", "Show DeepSeek"); } }
+        public static string ShowDeepSeekTip { get { return T("显示 DeepSeek 余额卡片", "Show the DeepSeek balance card"); } }
         public static string ShowOpenCode { get { return T("显示 OpenCode", "Show OpenCode"); } }
+        public static string ShowOpenCodeTip { get { return T("显示 OpenCode 额度卡片", "Show the OpenCode quota card"); } }
         public static string AlwaysOnTop { get { return T("窗口置顶", "Always on top"); } }
+        public static string AlwaysOnTopTip { get { return T("保持窗口位于其他窗口之上", "Keep the window above other windows"); } }
+        public static string CaptureHide { get { return T("截图时隐藏", "Hide from capture"); } }
+        public static string CaptureHideTip { get { return T("从屏幕截图和录屏中排除此窗口", "Exclude this window from screenshots and screen recording"); } }
         public static string Theme { get { return T("主题", "Theme"); } }
         public static string FollowSystem { get { return T("跟随系统", "Follow system"); } }
         public static string Light { get { return T("浅色", "Light"); } }
         public static string Dark { get { return T("深色", "Dark"); } }
         public static string LockWidth { get { return T("锁定宽度", "Lock width"); } }
+        public static string LockWidthTip { get { return T("禁止拖动左右边缘调整宽度", "Prevent resizing by dragging the side edges"); } }
         public static string EdgeSnap { get { return T("贴边吸附", "Snap to edge"); } }
         public static string EdgeSnapTip { get { return T("拖到屏幕边缘时吸附，鼠标移出后自动滑出", "Snap at a screen edge and slide out when the mouse leaves"); } }
         public static string AutoStart { get { return T("开机自启动", "Start with Windows"); } }

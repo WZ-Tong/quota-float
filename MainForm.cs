@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
@@ -19,26 +20,27 @@ namespace QuotaFloat
     {
         private const int WM_NCLBUTTONDOWN = 0xA1;
         private const int HT_CAPTION = 0x2;
-        private const int CS_DROPSHADOW = 0x20000;
         private const int WM_EXITSIZEMOVE = 0x0232;
-        private const int RefreshSeconds = 60;
-        private const int EdgeStrip = 10;
-        private const int SlideDuration = 180;
-        private const int HideDelay = 450;
-        private const int ShowDelay = 200;
-        private const int StartupHideDelay = 1500;
-        private const int DockTolerance = 14;
+        private const int WM_DISPLAYCHANGE = 0x007E;
+        private const int WM_SETTINGCHANGE = 0x001A;
+        private const int WM_THEMECHANGED = 0x031A;
+        private const int WS_EX_TOOLWINDOW = 0x80;
+        private const uint WDA_NONE = 0x00000000;
+        private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
         private readonly AppConfig cfg;
         private readonly bool demoMode;
         private readonly Timer uiTimer;
         private readonly Timer barTimer;
         private readonly Timer edgeTimer;
         private readonly Timer slideTimer;
+        private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly Label deepSeekBalance;
         private readonly Label deepSeekPeriod;
         private readonly Label deepSeekStatus;
@@ -60,7 +62,8 @@ namespace QuotaFloat
         private ToolStripMenuItem edgeHideItem;
 
         private bool fetching;
-        private DateTime lastFetch = DateTime.MinValue;
+        private long lastFetchStamp = Timing.NoStamp;
+        private long fetchStartStamp = Timing.NoStamp;
         private bool placed;
         private bool? peakState;
         private bool refreshingPaused;
@@ -76,7 +79,7 @@ namespace QuotaFloat
         private bool slideOutTarget;
         private Point slideFrom;
         private Point slideTo;
-        private int slideStartTick;
+        private long slideStartStamp;
         private float hintAlpha;
         private float hintFrom;
         private float hintTo;
@@ -87,6 +90,10 @@ namespace QuotaFloat
         private decimal lastDeepSeekBalance;
         private bool lastDeepSeekBalanceKnown;
         private string lastDeepSeekCurrency = "CNY";
+        private int frameIntervalMilliseconds = Timing.FallbackFrameIntervalMilliseconds;
+        private int displayRefreshHz = Timing.DefaultRefreshHz;
+        private bool highResolutionTimer;
+        private bool captureExcluded;
 
         private DateTime lastHeaderClick = DateTime.MinValue;
         private int headerClicks;
@@ -97,7 +104,8 @@ namespace QuotaFloat
         public MainForm()
         {
             demoMode = HasArg("--demo");
-            int demoWidth = HasArg("--wide") ? 700 : (HasArg("--narrow") ? AppConfig.MinWindowWidth : 380);
+            int demoWidth = HasArg("--wide") ? UiMetrics.WideDemoWidth :
+                (HasArg("--narrow") ? AppConfig.MinWindowWidth : AppConfig.DefaultWindowWidth);
             cfg = demoMode ? new AppConfig { WindowWidth = demoWidth, NoSave = true } : AppConfig.Load();
             if (demoMode)
             {
@@ -114,9 +122,9 @@ namespace QuotaFloat
             Palette.Apply(lightTheme);
 
             AutoScaleMode = AutoScaleMode.Dpi;
-            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleDimensions = new SizeF(UiMetrics.DefaultDpi, UiMetrics.DefaultDpi);
             int startWidth = Math.Max(AppConfig.MinWindowWidth, Math.Min(AppConfig.MaxWindowWidth, cfg.WindowWidth));
-            ClientSize = new Size(startWidth, 236);
+            ClientSize = new Size(startWidth, UiMetrics.InitialWindowHeight);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             BackColor = Palette.Bg;
@@ -124,26 +132,35 @@ namespace QuotaFloat
             ShowInTaskbar = false;
             DoubleBuffered = true;
             Text = demoMode ? Strings.AppTitleDemo : Strings.AppTitle;
-            Font = new Font("Segoe UI", 9F);
+            Font = new Font(UiMetrics.FontFamily, UiMetrics.FontBody);
             try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
             catch { }
 
             dsCard = new Card();
-            dsCard.Bounds = new Rectangle(12, 12, ClientSize.Width - 24, 72);
+            dsCard.Bounds = new Rectangle(UiMetrics.OuterMargin, UiMetrics.OuterMargin,
+                ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.DeepSeekCardHeight);
             Controls.Add(dsCard);
 
-            Label dsTitle = NewLabel("DeepSeek", 14, 8, 120, 16, 8.25F, FontStyle.Regular, Palette.Sub);
+            Label dsTitle = NewLabel("DeepSeek", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+                UiMetrics.DeepSeekTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
+                FontStyle.Regular, Palette.Sub);
             dsCard.Controls.Add(dsTitle);
 
-            deepSeekPeriod = NewLabel("", dsCard.Width - 100, 8, 86, 16, 8F, FontStyle.Regular, Palette.Sub);
+            deepSeekPeriod = NewLabel("", dsCard.Width - UiMetrics.DeepSeekPeriodRightInset,
+                UiMetrics.TitleTop, UiMetrics.DeepSeekPeriodWidth, UiMetrics.TitleHeight,
+                UiMetrics.FontSmall, FontStyle.Regular, Palette.Sub);
             deepSeekPeriod.TextAlign = ContentAlignment.MiddleRight;
             dsCard.Controls.Add(deepSeekPeriod);
 
-            deepSeekStatus = NewLabel(Strings.Loading, 14, 30, dsCard.Width - 28, 24, 9F, FontStyle.Regular, Palette.Sub);
+            deepSeekStatus = NewLabel(Strings.Loading, UiMetrics.CardTextInset,
+                UiMetrics.DeepSeekStatusTop, dsCard.Width - UiMetrics.CardContentInset,
+                UiMetrics.DeepSeekStatusHeight, UiMetrics.FontBody, FontStyle.Regular, Palette.Sub);
             deepSeekStatus.TextAlign = ContentAlignment.MiddleLeft;
             dsCard.Controls.Add(deepSeekStatus);
 
-            deepSeekBalanceOnly = NewLabel("—", 14, 26, dsCard.Width - 28, 40, 14F, FontStyle.Bold, Palette.Text);
+            deepSeekBalanceOnly = NewLabel("—", UiMetrics.CardTextInset, UiMetrics.DeepSeekBalanceTop,
+                dsCard.Width - UiMetrics.CardContentInset, UiMetrics.DeepSeekBalanceHeight,
+                UiMetrics.FontBalance, FontStyle.Bold, Palette.Text);
             deepSeekBalanceOnly.BackColor = Palette.Card;
             deepSeekBalanceOnly.TextAlign = ContentAlignment.MiddleLeft;
             deepSeekBalanceOnly.AutoEllipsis = true;
@@ -151,32 +168,38 @@ namespace QuotaFloat
             dsCard.Controls.Add(deepSeekBalanceOnly);
 
             equationPanel = new Panel();
-            equationPanel.Bounds = new Rectangle(0, 26, dsCard.Width, 44);
+            equationPanel.Bounds = new Rectangle(0, UiMetrics.EquationTop, dsCard.Width,
+                UiMetrics.EquationHeight);
             equationPanel.BackColor = Palette.Card;
             dsCard.Controls.Add(equationPanel);
 
-            deepSeekBalance = NewLabel("—", 14, 0, 100, 24, 12F, FontStyle.Bold, Palette.Text);
+            deepSeekBalance = NewLabel("—", UiMetrics.BalanceInitialLeft, 0,
+                UiMetrics.BalanceInitialWidth, UiMetrics.EquationLabelHeight,
+                UiMetrics.FontValue, FontStyle.Bold, Palette.Text);
             deepSeekBalance.BackColor = Palette.Card;
             deepSeekBalance.TextAlign = ContentAlignment.MiddleCenter;
             deepSeekBalance.AutoEllipsis = true;
             equationPanel.Controls.Add(deepSeekBalance);
 
-            plusLabel = NewLabel("+", 116, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
+            plusLabel = NewLabel("+", UiMetrics.PlusInitialLeft, 0, UiMetrics.EquationSymbolWidth,
+                UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             plusLabel.TextAlign = ContentAlignment.MiddleCenter;
             equationPanel.Controls.Add(plusLabel);
 
-            spentLabel = NewValueLabel(132, 0, 90);
+            spentLabel = NewValueLabel(UiMetrics.SpentInitialLeft, 0, UiMetrics.SpentInitialWidth);
             equationPanel.Controls.Add(spentLabel);
 
-            equalsLabel = NewLabel("=", 226, 0, 14, 24, 12F, FontStyle.Bold, Palette.Sub);
+            equalsLabel = NewLabel("=", UiMetrics.EqualsInitialLeft, 0, UiMetrics.EquationSymbolWidth,
+                UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             equalsLabel.TextAlign = ContentAlignment.MiddleCenter;
             equationPanel.Controls.Add(equalsLabel);
 
-            totalLabel = NewValueLabel(244, 0, 84);
+            totalLabel = NewValueLabel(UiMetrics.TotalInitialLeft, 0, UiMetrics.TotalInitialWidth);
             equationPanel.Controls.Add(totalLabel);
 
             dsBar = new MiniBar();
-            dsBar.Bounds = new Rectangle(10, 30, equationPanel.Width - 20, 4);
+            dsBar.Bounds = new Rectangle(UiMetrics.DeepSeekBarLeft, UiMetrics.DeepSeekBarTop,
+                equationPanel.Width - UiMetrics.DeepSeekBarWidthInset, UiMetrics.RefreshBarHeight);
             dsBar.FillColor = Palette.Blue;
             dsBar.BackColor = Palette.Card;
             equationPanel.Controls.Add(dsBar);
@@ -185,7 +208,7 @@ namespace QuotaFloat
             inlineEditor.BorderStyle = BorderStyle.None;
             inlineEditor.BackColor = Palette.Card;
             inlineEditor.ForeColor = Palette.Text;
-            inlineEditor.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            inlineEditor.Font = new Font(UiMetrics.FontFamily, UiMetrics.FontValue, FontStyle.Bold);
             inlineEditor.TextAlign = HorizontalAlignment.Center;
             inlineEditor.Visible = false;
             equationPanel.Controls.Add(inlineEditor);
@@ -193,27 +216,34 @@ namespace QuotaFloat
             equationPanel.Visible = false;
             deepSeekStatus.Text = cfg.DeepSeekKey.Length == 0 ? Strings.NotConfiguredHint : Strings.Loading;
 
-            spentLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(1); };
-            totalLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(2); };
+            spentLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(UiMetrics.EquationFieldSpent); };
+            totalLabel.MouseDown += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) ValueMouseDown(UiMetrics.EquationFieldTotal); };
             inlineEditor.Leave += delegate { EndEdit(true); };
             inlineEditor.KeyDown += EditorKeyDown;
 
             refreshBar = new MiniBar();
-            refreshBar.Bounds = new Rectangle(14, 89, ClientSize.Width - 28, 4);
+            refreshBar.Bounds = new Rectangle(UiMetrics.RefreshBarInset, UiMetrics.RefreshBarInitialTop,
+                ClientSize.Width - UiMetrics.RefreshBarWidthInset, UiMetrics.RefreshBarHeight);
             refreshBar.FillColor = Palette.Red;
             refreshBar.BackColor = Palette.Bg;
             Controls.Add(refreshBar);
 
             goCard = new Card();
-            goCard.Bounds = new Rectangle(12, 98, ClientSize.Width - 24, 126);
+            goCard.Bounds = new Rectangle(UiMetrics.OuterMargin, UiMetrics.OpenCodeCardInitialTop,
+                ClientSize.Width - UiMetrics.CardWidthInset, UiMetrics.OpenCodeCardHeight);
             Controls.Add(goCard);
 
-            Label goTitle = NewLabel("OpenCode", 14, 8, 160, 16, 8.25F, FontStyle.Regular, Palette.Sub);
+            Label goTitle = NewLabel("OpenCode", UiMetrics.CardTextInset, UiMetrics.TitleTop,
+                UiMetrics.GoTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
+                FontStyle.Regular, Palette.Sub);
             goCard.Controls.Add(goTitle);
 
-            row5h = NewRow(Strings.FiveHours, 14, 28, goCard.Width - 28);
-            rowWeek = NewRow(Strings.ThisWeek, 14, 58, goCard.Width - 28);
-            rowMonth = NewRow(Strings.ThisMonth, 14, 88, goCard.Width - 28);
+            row5h = NewRow(Strings.FiveHours, UiMetrics.CardTextInset, UiMetrics.GoRowTop,
+                goCard.Width - UiMetrics.CardContentInset);
+            rowWeek = NewRow(Strings.ThisWeek, UiMetrics.CardTextInset,
+                UiMetrics.GoRowTop + UiMetrics.GoRowSpacing, goCard.Width - UiMetrics.CardContentInset);
+            rowMonth = NewRow(Strings.ThisMonth, UiMetrics.CardTextInset,
+                UiMetrics.GoRowTop + UiMetrics.GoRowSpacing * UiMetrics.GoRowMonthOffset, goCard.Width - UiMetrics.CardContentInset);
             goCard.Controls.Add(row5h);
             goCard.Controls.Add(rowWeek);
             goCard.Controls.Add(rowMonth);
@@ -228,7 +258,7 @@ namespace QuotaFloat
             MouseEnter += delegate
             {
                 lastInside = DateTime.UtcNow;
-                if (!cfg.EdgeHide || dockedEdge == 0) return;
+                if (!cfg.EdgeHide || dockedEdge == EdgeMetrics.DockNone) return;
                 edgeArmed = true;
                 edgeTimer.Start();
                 hideNotBefore = DateTime.MinValue;
@@ -256,7 +286,7 @@ namespace QuotaFloat
             UpdateDisplay();
 
             uiTimer = new Timer();
-            uiTimer.Interval = 1000;
+            uiTimer.Interval = Timing.UiTickMilliseconds;
             uiTimer.Tick += delegate
             {
                 UpdatePeakBadge();
@@ -264,37 +294,55 @@ namespace QuotaFloat
                 rowWeek.Invalidate();
                 rowMonth.Invalidate();
                 if (edgeHidden || hintAlpha > 0f) Invalidate();
-                if (!demoMode && !refreshingPaused && !fetching && (DateTime.Now - lastFetch).TotalSeconds >= RefreshSeconds)
+                if (!demoMode && !refreshingPaused && !fetching &&
+                    SecondsSinceFetch() >= CurrentRefreshSeconds())
                     StartFetch();
             };
 
             barTimer = new Timer();
-            barTimer.Interval = 33;
+            barTimer.Interval = frameIntervalMilliseconds;
             barTimer.Tick += delegate
             {
+                if (fetching)
+                {
+                    refreshBar.Indeterminate = true;
+                    double shimmerMs = ElapsedMilliseconds(fetchStartStamp);
+                    refreshBar.Phase = (float)((shimmerMs % Timing.ShimmerPeriodMilliseconds) /
+                        Timing.ShimmerPeriodMilliseconds);
+                    refreshBar.Invalidate();
+                    return;
+                }
+
+                refreshBar.Indeterminate = false;
                 float remain = 1f;
-                if (lastFetch != DateTime.MinValue)
-                    remain = 1f - (float)(DateTime.Now - lastFetch).TotalSeconds / RefreshSeconds;
+                if (lastFetchStamp != Timing.NoStamp)
+                    remain = 1f - (float)SecondsSinceFetch() / CurrentRefreshSeconds();
                 if (remain < 0f) remain = 0f;
                 if (remain > 1f) remain = 1f;
-                refreshBar.Percent = remain * 100f;
+                refreshBar.Percent = remain * UiMetrics.PercentMax;
                 refreshBar.Invalidate();
             };
 
             edgeTimer = new Timer();
-            edgeTimer.Interval = 120;
+            edgeTimer.Interval = Timing.EdgeTickMilliseconds;
             edgeTimer.Tick += delegate { TickEdge(); };
 
             slideTimer = new Timer();
-            slideTimer.Interval = 15;
+            slideTimer.Interval = frameIntervalMilliseconds;
             slideTimer.Tick += delegate { TickSlide(); };
         }
 
         private ContextMenuStrip CreateMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Items.Add(Strings.RefreshNow, null, delegate { StartFetch(); });
+            menu.ShowItemToolTips = true;
+            ToolStripItem refreshItem = menu.Items.Add(Strings.RefreshNow, null,
+                delegate { StartFetch(); });
+            refreshItem.ToolTipText = Strings.RefreshNowTip;
+            menu.Items.Add(new ToolStripSeparator());
+
             ToolStripMenuItem eqItem = new ToolStripMenuItem(Strings.ShowEquation);
+            eqItem.ToolTipText = Strings.ShowEquationTip;
             eqItem.Checked = cfg.EquationEnabled;
             eqItem.Click += delegate
             {
@@ -305,6 +353,7 @@ namespace QuotaFloat
             };
             menu.Items.Add(eqItem);
             ToolStripMenuItem showDsItem = new ToolStripMenuItem(Strings.ShowDeepSeek);
+            showDsItem.ToolTipText = Strings.ShowDeepSeekTip;
             showDsItem.Checked = cfg.ShowDeepSeek;
             showDsItem.Click += delegate
             {
@@ -315,6 +364,7 @@ namespace QuotaFloat
             };
             menu.Items.Add(showDsItem);
             ToolStripMenuItem showGoItem = new ToolStripMenuItem(Strings.ShowOpenCode);
+            showGoItem.ToolTipText = Strings.ShowOpenCodeTip;
             showGoItem.Checked = cfg.ShowOpenCode;
             showGoItem.Click += delegate
             {
@@ -324,7 +374,9 @@ namespace QuotaFloat
                 cfg.Save();
             };
             menu.Items.Add(showGoItem);
+            menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem top = new ToolStripMenuItem(Strings.AlwaysOnTop);
+            top.ToolTipText = Strings.AlwaysOnTopTip;
             top.Checked = TopMost;
             top.Click += delegate
             {
@@ -334,30 +386,41 @@ namespace QuotaFloat
                 cfg.Save();
             };
             menu.Items.Add(top);
+            ToolStripMenuItem captureItem = new ToolStripMenuItem(Strings.CaptureHide);
+            captureItem.ToolTipText = Strings.CaptureHideTip;
+            captureItem.Checked = cfg.HideFromCapture;
+            captureItem.Click += delegate
+            {
+                cfg.HideFromCapture = !cfg.HideFromCapture;
+                captureItem.Checked = cfg.HideFromCapture;
+                cfg.Save();
+                ApplyCaptureVisibility();
+            };
+            menu.Items.Add(captureItem);
             ToolStripMenuItem themeMenu = new ToolStripMenuItem(Strings.Theme);
             ToolStripMenuItem autoItem = new ToolStripMenuItem(Strings.FollowSystem);
             ToolStripMenuItem lightItem = new ToolStripMenuItem(Strings.Light);
             ToolStripMenuItem darkItem = new ToolStripMenuItem(Strings.Dark);
-            autoItem.Checked = cfg.ThemeMode == 0;
-            lightItem.Checked = cfg.ThemeMode == 1;
-            darkItem.Checked = cfg.ThemeMode == 2;
+            autoItem.Checked = cfg.ThemeMode == AppConfig.ThemeFollowSystem;
+            lightItem.Checked = cfg.ThemeMode == AppConfig.ThemeLight;
+            darkItem.Checked = cfg.ThemeMode == AppConfig.ThemeDark;
             autoItem.Click += delegate
             {
-                SetThemeMode(0);
+                SetThemeMode(AppConfig.ThemeFollowSystem);
                 autoItem.Checked = true;
                 lightItem.Checked = false;
                 darkItem.Checked = false;
             };
             lightItem.Click += delegate
             {
-                SetThemeMode(1);
+                SetThemeMode(AppConfig.ThemeLight);
                 autoItem.Checked = false;
                 lightItem.Checked = true;
                 darkItem.Checked = false;
             };
             darkItem.Click += delegate
             {
-                SetThemeMode(2);
+                SetThemeMode(AppConfig.ThemeDark);
                 autoItem.Checked = false;
                 lightItem.Checked = false;
                 darkItem.Checked = true;
@@ -367,6 +430,7 @@ namespace QuotaFloat
             themeMenu.DropDownItems.Add(darkItem);
             menu.Items.Add(themeMenu);
             ToolStripMenuItem lockItem = new ToolStripMenuItem(Strings.LockWidth);
+            lockItem.ToolTipText = Strings.LockWidthTip;
             lockItem.Checked = cfg.WidthLocked;
             lockItem.Click += delegate
             {
@@ -386,6 +450,7 @@ namespace QuotaFloat
                 ApplyEdgeHideSetting();
             };
             menu.Items.Add(edgeHideItem);
+            menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem autoStartItem = new ToolStripMenuItem(Strings.AutoStart);
             autoStartItem.ToolTipText = Strings.AutoStartTip;
             autoStartItem.Checked = IsAutoStartEnabled();
@@ -410,7 +475,7 @@ namespace QuotaFloat
             Label l = new Label();
             l.Text = text;
             l.Bounds = new Rectangle(x, y, w, h);
-            l.Font = new Font("Segoe UI", size, style);
+            l.Font = new Font(UiMetrics.FontFamily, size, style);
             l.ForeColor = color;
             l.BackColor = Color.Transparent;
             return l;
@@ -420,13 +485,14 @@ namespace QuotaFloat
         {
             UsageRow r = new UsageRow();
             r.Caption = caption;
-            r.Bounds = new Rectangle(x, y, w, 30);
+            r.Bounds = new Rectangle(x, y, w, UiMetrics.UsageRowHeight);
             return r;
         }
 
         private Label NewValueLabel(int x, int y, int w)
         {
-            Label l = NewLabel("—", x, y, w, 24, 12F, FontStyle.Bold, Palette.Text);
+            Label l = NewLabel("—", x, y, w, UiMetrics.EquationLabelHeight,
+                UiMetrics.FontValue, FontStyle.Bold, Palette.Text);
             l.BackColor = Palette.Card;
             l.TextAlign = ContentAlignment.MiddleCenter;
             l.Cursor = Cursors.IBeam;
@@ -439,21 +505,21 @@ namespace QuotaFloat
         {
             if (dsCard == null || goCard == null || refreshBar == null) return;
             int w = ClientSize.Width;
-            dsCard.Width = w - 24;
-            goCard.Width = w - 24;
-            refreshBar.Width = w - 28;
+            dsCard.Width = w - UiMetrics.CardWidthInset;
+            goCard.Width = w - UiMetrics.CardWidthInset;
+            refreshBar.Width = w - UiMetrics.RefreshBarWidthInset;
             if (equationPanel != null) equationPanel.Width = dsCard.Width;
             if (dsBar != null)
             {
-                dsBar.Left = 10;
-                dsBar.Width = dsCard.Width - 20;
+                dsBar.Left = UiMetrics.DeepSeekBarLeft;
+                dsBar.Width = dsCard.Width - UiMetrics.DeepSeekBarWidthInset;
             }
-            if (deepSeekStatus != null) deepSeekStatus.Width = dsCard.Width - 28;
-            if (deepSeekBalanceOnly != null) deepSeekBalanceOnly.Width = dsCard.Width - 28;
-            if (deepSeekPeriod != null) deepSeekPeriod.Left = dsCard.Width - 100;
+            if (deepSeekStatus != null) deepSeekStatus.Width = dsCard.Width - UiMetrics.CardContentInset;
+            if (deepSeekBalanceOnly != null) deepSeekBalanceOnly.Width = dsCard.Width - UiMetrics.CardContentInset;
+            if (deepSeekPeriod != null) deepSeekPeriod.Left = dsCard.Width - UiMetrics.DeepSeekPeriodRightInset;
             if (row5h != null && rowWeek != null && rowMonth != null)
             {
-                int rowWidth = goCard.Width - 28;
+                int rowWidth = goCard.Width - UiMetrics.CardContentInset;
                 row5h.Width = rowWidth;
                 rowWeek.Width = rowWidth;
                 rowMonth.Width = rowWidth;
@@ -467,13 +533,13 @@ namespace QuotaFloat
             Size size = TextRenderer.MeasureText(text, label.Font,
                 new Size(int.MaxValue, label.Height),
                 TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-            return size.Width + 12;
+            return size.Width + UiMetrics.EquationMeasurePadding;
         }
 
         private static void PlaceEquation(Label label, int x, int width)
         {
-            if (width < 8) width = 8;
-            label.Bounds = new Rectangle(x, 0, width, 24);
+            if (width < UiMetrics.EquationMinLabelWidth) width = UiMetrics.EquationMinLabelWidth;
+            label.Bounds = new Rectangle(x, 0, width, UiMetrics.EquationLabelHeight);
         }
 
         private void LayoutEquation()
@@ -481,30 +547,33 @@ namespace QuotaFloat
             if (equationPanel == null || deepSeekBalance == null || spentLabel == null ||
                 totalLabel == null || plusLabel == null || equalsLabel == null) return;
 
-            int available = equationPanel.Width - 20;
-            if (available < 40) return;
-            const int gap = 4;
-            const int symbol = 14;
+            int available = equationPanel.Width - UiMetrics.EquationAvailableInset;
+            if (available < UiMetrics.EquationMinAvailableWidth) return;
+            int gap = UiMetrics.EquationGap;
+            int symbol = UiMetrics.EquationSymbolWidth;
 
             int balanceWidth = MeasureEquationWidth(deepSeekBalance);
             int spentWidth = MeasureEquationWidth(spentLabel);
             int totalWidth = MeasureEquationWidth(totalLabel);
-            int needed = balanceWidth + spentWidth + totalWidth + symbol * 2 + gap * 4;
-            int left = 10;
+            int needed = balanceWidth + spentWidth + totalWidth + symbol * UiMetrics.EquationSymbolCount + gap * UiMetrics.EquationGapCount;
+            int left = UiMetrics.EquationHorizontalMargin;
 
             if (needed > available)
             {
-                int values = Math.Max(30, available - symbol * 2 - gap * 4);
+                int values = Math.Max(UiMetrics.EquationMinValuesAreaWidth,
+                    available - symbol * UiMetrics.EquationSymbolCount - gap * UiMetrics.EquationGapCount);
                 int sum = Math.Max(1, balanceWidth + spentWidth + totalWidth);
-                balanceWidth = Math.Max(20, (int)Math.Round((double)values * balanceWidth / sum));
-                spentWidth = Math.Max(20, (int)Math.Round((double)values * spentWidth / sum));
-                totalWidth = Math.Max(20, values - balanceWidth - spentWidth);
+                balanceWidth = Math.Max(UiMetrics.EquationMinValueWidth,
+                    (int)Math.Round((double)values * balanceWidth / sum));
+                spentWidth = Math.Max(UiMetrics.EquationMinValueWidth,
+                    (int)Math.Round((double)values * spentWidth / sum));
+                totalWidth = Math.Max(UiMetrics.EquationMinValueWidth, values - balanceWidth - spentWidth);
                 if (balanceWidth + spentWidth + totalWidth > values)
                 {
                     int over = balanceWidth + spentWidth + totalWidth - values;
-                    balanceWidth = Math.Max(20, balanceWidth - over);
+                    balanceWidth = Math.Max(UiMetrics.EquationMinValueWidth, balanceWidth - over);
                     over = balanceWidth + spentWidth + totalWidth - values;
-                    if (over > 0) spentWidth = Math.Max(20, spentWidth - over);
+                    if (over > 0) spentWidth = Math.Max(UiMetrics.EquationMinValueWidth, spentWidth - over);
                 }
             }
             else
@@ -541,32 +610,38 @@ namespace QuotaFloat
             dsCard.Visible = ds;
             goCard.Visible = go;
 
-            const int pad = 12;
-            const int gap = 5;
+            const int pad = UiMetrics.OuterMargin;
+            const int barGap = UiMetrics.RefreshBarGap;
             int w = ClientSize.Width;
             int top = pad;
 
             if (ds)
             {
-                dsCard.Bounds = new Rectangle(12, top, w - 24, 72);
-                top += 72;
+                dsCard.Bounds = new Rectangle(pad, top, w - UiMetrics.CardWidthInset,
+                    UiMetrics.DeepSeekCardHeight);
+                top += UiMetrics.DeepSeekCardHeight;
             }
 
             if (ds && go)
             {
-                refreshBar.Bounds = new Rectangle(14, top + gap, w - 28, 4);
-                top = refreshBar.Bottom + gap;
+                refreshBar.Bounds = new Rectangle(UiMetrics.RefreshBarInset, top + barGap,
+                    w - UiMetrics.RefreshBarWidthInset, UiMetrics.RefreshBarHeight);
+                top = refreshBar.Bottom + barGap;
             }
 
             if (go)
             {
-                goCard.Bounds = new Rectangle(12, top, w - 24, 126);
-                top += 126;
+                goCard.Bounds = new Rectangle(pad, top, w - UiMetrics.CardWidthInset,
+                    UiMetrics.OpenCodeCardHeight);
+                top += UiMetrics.OpenCodeCardHeight;
             }
 
             if (!ds || !go)
             {
-                refreshBar.Bounds = new Rectangle(14, (ds || go) ? top + gap : pad, w - 28, 4);
+                // Footer: 5px to the remaining card, then the normal 12px outer margin.
+                refreshBar.Bounds = new Rectangle(UiMetrics.RefreshBarInset,
+                    (ds || go) ? top + barGap : pad, w - UiMetrics.RefreshBarWidthInset,
+                    UiMetrics.RefreshBarHeight);
                 top = refreshBar.Bottom;
             }
 

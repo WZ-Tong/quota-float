@@ -19,15 +19,21 @@ namespace QuotaFloat
     {
         public const int MinWindowWidth = 320;
         public const int MaxWindowWidth = 720;
+        public const int DefaultWindowWidth = 380;
+        public const int ThemeFollowSystem = 0;
+        public const int ThemeLight = 1;
+        public const int ThemeDark = 2;
+        public const int UnsetCoordinate = -999999;
+        public const double DefaultEdgeAnchor = 0.5;
 
         public string DeepSeekKey = "";
         public string OpenCodeKey = "";
-        public int WindowWidth = 380;
+        public int WindowWidth = DefaultWindowWidth;
         public bool WidthLocked;
         public bool EdgeHide = true;
-        public int EdgeDock;
-        public double EdgeAnchor = 0.5;
-        public int ThemeMode;
+        public int EdgeDock = EdgeMetrics.DockNone;
+        public double EdgeAnchor = DefaultEdgeAnchor;
+        public int ThemeMode = ThemeFollowSystem;
         public bool EquationEnabled = true;
         public bool ShowDeepSeek = true;
         public bool ShowOpenCode = true;
@@ -38,9 +44,10 @@ namespace QuotaFloat
         public string DeepSeekCurrency = "CNY";
         public string Language = "";
         public bool DeepSeekBalanceKnown;
-        public int X = -999999;
-        public int Y = -999999;
+        public int X = UnsetCoordinate;
+        public int Y = UnsetCoordinate;
         public bool TopMost = true;
+        public bool HideFromCapture = true;
         public bool NoSave;
 
         public static string ConfigPath
@@ -65,18 +72,20 @@ namespace QuotaFloat
                 if (d == null) return c;
                 c.DeepSeekKey = Unprotect(GetStr(d, "deepseekKey"));
                 c.OpenCodeKey = Unprotect(GetStr(d, "opencodeKey"));
-                c.WindowWidth = GetInt(d, "windowWidth", 380);
+                c.WindowWidth = GetInt(d, "windowWidth", DefaultWindowWidth);
                 if (c.WindowWidth < MinWindowWidth) c.WindowWidth = MinWindowWidth;
                 if (c.WindowWidth > MaxWindowWidth) c.WindowWidth = MaxWindowWidth;
                 c.WidthLocked = GetBool(d, "widthLocked", false);
                 c.EdgeHide = GetBool(d, "edgeHide", true);
-                c.EdgeDock = GetInt(d, "edgeDock", 0);
-                if (c.EdgeDock < 0 || c.EdgeDock > 4) c.EdgeDock = 0;
-                c.EdgeAnchor = GetDouble(d, "edgeAnchor", 0.5);
+                c.EdgeDock = GetInt(d, "edgeDock", EdgeMetrics.DockNone);
+                if (c.EdgeDock < EdgeMetrics.DockNone || c.EdgeDock > EdgeMetrics.DockBottom)
+                    c.EdgeDock = EdgeMetrics.DockNone;
+                c.EdgeAnchor = GetDouble(d, "edgeAnchor", DefaultEdgeAnchor);
                 if (c.EdgeAnchor < 0.0) c.EdgeAnchor = 0.0;
                 if (c.EdgeAnchor > 1.0) c.EdgeAnchor = 1.0;
-                c.ThemeMode = GetInt(d, "themeMode", 0);
-                if (c.ThemeMode < 0 || c.ThemeMode > 2) c.ThemeMode = 0;
+                c.ThemeMode = GetInt(d, "themeMode", ThemeFollowSystem);
+                if (c.ThemeMode < ThemeFollowSystem || c.ThemeMode > ThemeDark)
+                    c.ThemeMode = ThemeFollowSystem;
                 c.EquationEnabled = GetBool(d, "equationEnabled", true);
                 c.ShowDeepSeek = GetBool(d, "showDeepSeek", true);
                 c.ShowOpenCode = GetBool(d, "showOpenCode", true);
@@ -88,9 +97,10 @@ namespace QuotaFloat
                 if (string.IsNullOrEmpty(c.DeepSeekCurrency)) c.DeepSeekCurrency = "CNY";
                 c.Language = GetStr(d, "language");
                 c.DeepSeekBalanceKnown = GetBool(d, "deepseekBalanceKnown", false);
-                c.X = GetInt(d, "x", -999999);
-                c.Y = GetInt(d, "y", -999999);
+                c.X = GetInt(d, "x", UnsetCoordinate);
+                c.Y = GetInt(d, "y", UnsetCoordinate);
                 c.TopMost = GetBool(d, "topMost", true);
+                c.HideFromCapture = GetBool(d, "hideFromCapture", true);
             }
             catch { }
             return c;
@@ -123,6 +133,7 @@ namespace QuotaFloat
                 d["x"] = X;
                 d["y"] = Y;
                 d["topMost"] = TopMost;
+                d["hideFromCapture"] = HideFromCapture;
                 Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath));
                 File.WriteAllText(ConfigPath,
                     new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
