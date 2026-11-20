@@ -194,13 +194,16 @@ namespace QuotaFloat
         public const int HorizontalShortSegments = 5;
         public const int HorizontalLongSegments = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int ParentDotAlpha = 150;
+        public const int ParentDotAlpha = 190;
         public const int ParentDotDiameter = 2;
+        public const int TenPercentDotAlpha = 130;
+        public const int TenPercentDotDiameter = 2;
+        public const int TenPercentStep = 10;
         public const int HorizontalLongGrid = 5;
         public const int HorizontalShortGrid = 10;
 
-        public const int SubTickAlpha = 215;
-        public const float SubTickWidth = 3f;
+        public const int SubTickAlpha = 70;
+        public const float SubTickWidth = 2f;
         public const int SegmentRadius = 2;
         public const int SegmentMinLengthForTicks = 8;
         public const int SubTickInset = 1;

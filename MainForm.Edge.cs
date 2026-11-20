@@ -401,13 +401,16 @@ namespace QuotaFloat
                 : 0;
             int subAlpha = (int)Math.Round(EdgeMetrics.SubTickAlpha * hintAlpha);
             int dotAlpha = (int)Math.Round(EdgeMetrics.ParentDotAlpha * hintAlpha);
+            int tenAlpha = (int)Math.Round(EdgeMetrics.TenPercentDotAlpha * hintAlpha);
             Color dotColor = Color.FromArgb(dotAlpha, lightTheme ? Color.Black : Color.White);
+            Color tenColor = Color.FromArgb(tenAlpha, lightTheme ? Color.Black : Color.White);
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
             using (Pen subTick = new Pen(Color.FromArgb(subAlpha, Palette.Bg),
                 EdgeMetrics.SubTickWidth))
             using (SolidBrush db = new SolidBrush(dotColor))
+            using (SolidBrush tenDb = new SolidBrush(tenColor))
             {
                 Rectangle bar = new Rectangle(x, y, w, h);
                 using (GraphicsPath tp = Ui.Rounded(bar, EdgeMetrics.SegmentRadius))
@@ -424,10 +427,9 @@ namespace QuotaFloat
 
                 if (gridStep > 0 && len >= EdgeMetrics.SegmentMinLengthForTicks)
                 {
-                    int parentStep = UiMetrics.PercentMax / segments;
                     for (int p = gridStep; p < UiMetrics.PercentMax; p += gridStep)
                     {
-                        if (p % parentStep == 0) continue;
+                        if (p % EdgeMetrics.TenPercentStep == 0) continue;
                         int pos = (vertical ? y : x) +
                             (int)Math.Round(len * p / (double)UiMetrics.PercentMax);
                         if (vertical)
@@ -436,6 +438,21 @@ namespace QuotaFloat
                         else
                             g.DrawLine(subTick, pos, y + EdgeMetrics.SubTickInset,
                                 pos, y + thick - EdgeMetrics.SubTickEndInset);
+                    }
+                }
+
+                if (tenAlpha > 0)
+                {
+                    float tenRadius = EdgeMetrics.TenPercentDotDiameter / 2f;
+                    for (int p = EdgeMetrics.TenPercentStep;
+                        p < UiMetrics.PercentMax; p += EdgeMetrics.TenPercentStep)
+                    {
+                        int pos = (vertical ? y : x) +
+                            (int)Math.Round(len * p / (double)UiMetrics.PercentMax);
+                        float cx = vertical ? x + thick / 2f : pos;
+                        float cy = vertical ? pos : y + thick / 2f;
+                        g.FillEllipse(tenDb, cx - tenRadius, cy - tenRadius,
+                            EdgeMetrics.TenPercentDotDiameter, EdgeMetrics.TenPercentDotDiameter);
                     }
                 }
 
