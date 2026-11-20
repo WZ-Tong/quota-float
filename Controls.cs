@@ -53,12 +53,58 @@ namespace QuotaFloat
         public Color FillColor = Palette.Blue;
         public bool Indeterminate;
         public float Phase;
+        public bool HasValue;
+
+        private bool animating;
+        private float displayPercent;
+        private float animationFrom;
+        private long animationStartMilliseconds;
 
         public MiniBar()
         {
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             Height = UiMetrics.RefreshBarHeight;
+        }
+
+        public void SetAnimatedPercent(float target, long nowMilliseconds, bool animate)
+        {
+            target = Math.Max(0f, Math.Min(UiMetrics.PercentMax, target));
+            if (!animate || !HasValue ||
+                Math.Abs(target - Percent) < Timing.DataBarAnimationMinDeltaPercent)
+            {
+                Percent = target;
+                displayPercent = target;
+                animating = false;
+                HasValue = true;
+                Invalidate();
+                return;
+            }
+
+            animationFrom = animating ? displayPercent : Percent;
+            Percent = target;
+            animationStartMilliseconds = nowMilliseconds;
+            animating = true;
+            HasValue = true;
+            Invalidate();
+        }
+
+        public bool AdvanceAnimation(long nowMilliseconds)
+        {
+            if (!animating) return false;
+            double t = (nowMilliseconds - animationStartMilliseconds) /
+                (double)Timing.DataBarAnimationMilliseconds;
+            if (t >= 1.0)
+            {
+                displayPercent = Percent;
+                animating = false;
+            }
+            else
+            {
+                displayPercent = animationFrom +
+                    (Percent - animationFrom) * Ui.EaseOut((float)t);
+            }
+            return true;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -88,7 +134,8 @@ namespace QuotaFloat
                 return;
             }
 
-            float pct = Math.Max(0f, Math.Min(UiMetrics.PercentMax, Percent));
+            float pct = Math.Max(0f, Math.Min(UiMetrics.PercentMax,
+                animating ? displayPercent : Percent));
             if (pct <= 0f) return;
             int fw = (int)Math.Round(w * pct / UiMetrics.PercentMax);
             if (fw < 1) fw = 1;
@@ -109,6 +156,10 @@ namespace QuotaFloat
         public DateTimeOffset? ResetsAt;
 
         private readonly Font captionFont = new Font(UiMetrics.FontFamily, UiMetrics.FontCaption);
+        private bool animating;
+        private float displayRemaining;
+        private float animationFrom;
+        private long animationStartMilliseconds;
 
         public UsageRow()
         {
@@ -116,6 +167,43 @@ namespace QuotaFloat
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             BackColor = Palette.Card;
             Height = UiMetrics.UsageRowHeight;
+        }
+
+        public void SetAnimatedRemaining(int target, long nowMilliseconds, bool animate)
+        {
+            int previous = Remaining;
+            Remaining = target;
+            if (!animate || target < 0 || previous < 0 ||
+                Math.Abs(target - previous) < Timing.DataBarAnimationMinDeltaPercent)
+            {
+                displayRemaining = target;
+                animating = false;
+                Invalidate();
+                return;
+            }
+
+            animationFrom = animating ? displayRemaining : previous;
+            animationStartMilliseconds = nowMilliseconds;
+            animating = true;
+            Invalidate();
+        }
+
+        public bool AdvanceAnimation(long nowMilliseconds)
+        {
+            if (!animating) return false;
+            double t = (nowMilliseconds - animationStartMilliseconds) /
+                (double)Timing.DataBarAnimationMilliseconds;
+            if (t >= 1.0)
+            {
+                displayRemaining = Remaining;
+                animating = false;
+            }
+            else
+            {
+                displayRemaining = animationFrom +
+                    (Remaining - animationFrom) * Ui.EaseOut((float)t);
+            }
+            return true;
         }
 
         private string Countdown()
@@ -174,9 +262,12 @@ namespace QuotaFloat
             using (SolidBrush bgb = new SolidBrush(Palette.BarBg))
                 g.FillPath(bgb, bgp);
 
-            if (Remaining > 0 && Error.Length == 0)
+            float barRemaining = animating ? displayRemaining : Remaining;
+            float barPct = Math.Max(0f, Math.Min(UiMetrics.PercentMax, barRemaining));
+            if (barPct > 0f && Error.Length == 0)
             {
-                int fw = Math.Max(UiMetrics.UsageBarMinWidth, w * Remaining / UiMetrics.PercentMax);
+                int fw = Math.Max(UiMetrics.UsageBarMinWidth,
+                    (int)Math.Round(w * barPct / UiMetrics.PercentMax));
                 if (fw > w) fw = w;
                 using (GraphicsPath fp = Ui.Rounded(new Rectangle(0, barY, fw, barH), UiMetrics.BarCornerRadius))
                 using (SolidBrush fb = new SolidBrush(pctColor))

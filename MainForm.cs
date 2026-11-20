@@ -303,6 +303,12 @@ namespace QuotaFloat
             barTimer.Interval = frameIntervalMilliseconds;
             barTimer.Tick += delegate
             {
+                long nowMilliseconds = clock.ElapsedMilliseconds;
+                if (dsBar.AdvanceAnimation(nowMilliseconds)) dsBar.Invalidate();
+                if (row5h.AdvanceAnimation(nowMilliseconds)) row5h.Invalidate();
+                if (rowWeek.AdvanceAnimation(nowMilliseconds)) rowWeek.Invalidate();
+                if (rowMonth.AdvanceAnimation(nowMilliseconds)) rowMonth.Invalidate();
+
                 if (fetching)
                 {
                     refreshBar.Indeterminate = true;

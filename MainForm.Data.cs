@@ -154,15 +154,16 @@ namespace QuotaFloat
             return string.IsNullOrEmpty(currency) ? "" : currency + " ";
         }
 
-        private static void ApplyRow(UsageRow row, GoState go, GoWindow w)
+        private void ApplyRow(UsageRow row, GoState go, GoWindow w)
         {
             row.Configured = go.Configured;
             row.Error = go.Ok ? "" : go.Error;
             row.RateLimited = go.Ok && w.RateLimited;
             row.ResetsAt = go.Ok ? w.ResetsAt : null;
-            row.Remaining = go.Ok && w.HasData && !w.RateLimited
+            int remaining = go.Ok && w.HasData && !w.RateLimited
                 ? Math.Max(0, UiMetrics.PercentMax - w.Used) : -1;
-            if (go.Ok && w.RateLimited) row.Remaining = 0;
+            if (go.Ok && w.RateLimited) remaining = 0;
+            row.SetAnimatedRemaining(remaining, clock.ElapsedMilliseconds, !edgeHidden);
             row.Invalidate();
         }
 

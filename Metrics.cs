@@ -143,6 +143,8 @@ namespace QuotaFloat
         public const int EdgeTickMilliseconds = 120;
         public const int FallbackFrameIntervalMilliseconds = 16;
         public const int ShimmerPeriodMilliseconds = 1100;
+        public const int DataBarAnimationMilliseconds = 320;
+        public const float DataBarAnimationMinDeltaPercent = 1f;
         public const int SlideDurationMilliseconds = 180;
         public const int HideDelayMilliseconds = 450;
         public const int ShowDelayMilliseconds = 200;

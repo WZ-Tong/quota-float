@@ -207,7 +207,7 @@ namespace QuotaFloat
                 Invalidate();
                 return;
             }
-            float ease = 1f - (1f - t) * (1f - t) * (1f - t);
+            float ease = Ui.EaseOut(t);
             int x = slideFrom.X + (int)Math.Round((slideTo.X - slideFrom.X) * ease);
             int y = slideFrom.Y + (int)Math.Round((slideTo.Y - slideFrom.Y) * ease);
             Location = new Point(x, y);

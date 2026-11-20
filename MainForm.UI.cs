@@ -153,21 +153,23 @@ namespace QuotaFloat
             if (!lastDeepSeekBalanceKnown) return;
             string sym = CurrencySymbol(lastDeepSeekCurrency);
             deepSeekBalance.Text = sym + " " + lastDeepSeekBalance.ToString("0.00", CultureInfo.InvariantCulture);
+            float barTarget;
             if (cfg.DeepSeekHasTotal)
             {
                 decimal s = cfg.DeepSeekTotal - lastDeepSeekBalance;
                 if (s < 0m) s = 0m;
                 spentLabel.Text = s.ToString("0.00", CultureInfo.InvariantCulture);
                 totalLabel.Text = cfg.DeepSeekTotal.ToString("0.00", CultureInfo.InvariantCulture);
-                dsBar.Percent = cfg.DeepSeekTotal > 0m ? (float)(lastDeepSeekBalance * UiMetrics.PercentMax / cfg.DeepSeekTotal) : 0f;
+                barTarget = cfg.DeepSeekTotal > 0m
+                    ? (float)(lastDeepSeekBalance * UiMetrics.PercentMax / cfg.DeepSeekTotal) : 0f;
             }
             else
             {
                 spentLabel.Text = "0";
                 totalLabel.Text = lastDeepSeekBalance.ToString("0.00", CultureInfo.InvariantCulture);
-                dsBar.Percent = lastDeepSeekBalance > 0m ? UiMetrics.PercentMax : 0f;
+                barTarget = lastDeepSeekBalance > 0m ? UiMetrics.PercentMax : 0f;
             }
-            dsBar.Invalidate();
+            dsBar.SetAnimatedPercent(barTarget, clock.ElapsedMilliseconds, !edgeHidden);
             LayoutEquation();
         }
 

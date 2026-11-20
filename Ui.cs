@@ -92,6 +92,14 @@ namespace QuotaFloat
             return Palette.Green;
         }
 
+        public static float EaseOut(float t)
+        {
+            if (t <= 0f) return 0f;
+            if (t >= 1f) return 1f;
+            float inverse = 1f - t;
+            return 1f - inverse * inverse * inverse;
+        }
+
         public static string MaskKey(string key)
         {
             if (string.IsNullOrEmpty(key)) return Strings.NotSet;
