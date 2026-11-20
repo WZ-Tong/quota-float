@@ -2419,37 +2419,25 @@ namespace QuotaFloat
             if (x + w > Width) x = Width - w;
             if (y + h > Height) y = Height - h;
 
-            int segments;
-            int gridStep;
-            if (vertical)
-            {
-                segments = EdgeMetrics.VerticalSegments;
-                gridStep = 0;
-            }
-            else
-            {
-                segments = len >= EdgeMetrics.HorizontalLongThreshold
-                    ? EdgeMetrics.HorizontalLongSegments : EdgeMetrics.HorizontalShortSegments;
-                gridStep = segments == EdgeMetrics.HorizontalLongSegments
-                    ? EdgeMetrics.HorizontalLongGrid : EdgeMetrics.HorizontalShortGrid;
-            }
+            int majorStep = vertical
+                ? EdgeMetrics.VerticalMajorStep
+                : (len >= EdgeMetrics.HorizontalLongThreshold
+                    ? EdgeMetrics.HorizontalLongMajorStep : EdgeMetrics.HorizontalShortMajorStep);
+            int minorStep = majorStep / EdgeMetrics.MinorStepDivisor;
 
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
             int fillLen = pct > 0
                 ? Math.Max(1, (int)Math.Round(len * pct / (double)UiMetrics.PercentMax))
                 : 0;
-            int subAlpha = (int)Math.Round(EdgeMetrics.SubTickAlpha * hintAlpha);
-            int dotAlpha = (int)Math.Round(EdgeMetrics.ParentDotAlpha * hintAlpha);
-            int tenAlpha = (int)Math.Round(EdgeMetrics.TenPercentDotAlpha * hintAlpha);
-            Color dotColor = Color.FromArgb(dotAlpha, Color.White);
-            Color tenColor = Color.FromArgb(tenAlpha, Color.White);
+            int majorAlpha = (int)Math.Round(EdgeMetrics.MajorDotAlpha * hintAlpha);
+            int minorAlpha = (int)Math.Round(EdgeMetrics.MinorDotAlpha * hintAlpha);
+            Color majorColor = Color.FromArgb(majorAlpha, Palette.Bg);
+            Color minorColor = Color.FromArgb(minorAlpha, Palette.Bg);
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(subAlpha, Palette.Bg),
-                EdgeMetrics.SubTickWidth))
-            using (SolidBrush db = new SolidBrush(dotColor))
-            using (SolidBrush tenDb = new SolidBrush(tenColor))
+            using (SolidBrush majorDb = new SolidBrush(majorColor))
+            using (SolidBrush minorDb = new SolidBrush(minorColor))
             {
                 Rectangle bar = new Rectangle(x, y, w, h);
                 using (GraphicsPath tp = Ui.Rounded(bar, EdgeMetrics.SegmentRadius))
@@ -2464,57 +2452,32 @@ namespace QuotaFloat
                         g.FillPath(fb, fp);
                 }
 
-                if (gridStep > 0 && len >= EdgeMetrics.SegmentMinLengthForTicks)
+                if (minorAlpha > 0)
                 {
-                    for (int p = gridStep; p < UiMetrics.PercentMax; p += gridStep)
+                    float minorRadius = EdgeMetrics.MinorDotDiameter / 2f;
+                    for (int p = minorStep; p < UiMetrics.PercentMax; p += minorStep)
                     {
-                        if (p % EdgeMetrics.TenPercentStep == 0) continue;
+                        if (p % majorStep == 0) continue;
                         int pos = (vertical ? y : x) +
                             (int)Math.Round(len * p / (double)UiMetrics.PercentMax);
-                        if (vertical)
-                            g.DrawLine(subTick, x + EdgeMetrics.SubTickInset, pos,
-                                x + thick - EdgeMetrics.SubTickEndInset, pos);
-                        else
-                            g.DrawLine(subTick, pos, y + EdgeMetrics.SubTickInset,
-                                pos, y + thick - EdgeMetrics.SubTickEndInset);
+                        float cx = vertical ? x + thick / 2f : pos;
+                        float cy = vertical ? pos : y + thick / 2f;
+                        g.FillEllipse(minorDb, cx - minorRadius, cy - minorRadius,
+                            EdgeMetrics.MinorDotDiameter, EdgeMetrics.MinorDotDiameter);
                     }
                 }
 
-                if (tenAlpha > 0)
+                if (majorAlpha > 0)
                 {
-                    float tenRadius = EdgeMetrics.TenPercentDotDiameter / 2f;
-                    for (int p = EdgeMetrics.TenPercentStep;
-                        p < UiMetrics.PercentMax; p += EdgeMetrics.TenPercentStep)
+                    float majorRadius = EdgeMetrics.MajorDotDiameter / 2f;
+                    for (int p = majorStep; p < UiMetrics.PercentMax; p += majorStep)
                     {
                         int pos = (vertical ? y : x) +
                             (int)Math.Round(len * p / (double)UiMetrics.PercentMax);
                         float cx = vertical ? x + thick / 2f : pos;
                         float cy = vertical ? pos : y + thick / 2f;
-                        g.FillEllipse(tenDb, cx - tenRadius, cy - tenRadius,
-                            EdgeMetrics.TenPercentDotDiameter, EdgeMetrics.TenPercentDotDiameter);
-                    }
-                }
-
-                if (dotAlpha > 0)
-                {
-                    float radius = EdgeMetrics.ParentDotDiameter / 2f;
-                    for (int i = 1; i < segments; i++)
-                    {
-                        double fraction = (double)i / segments;
-                        if (vertical)
-                        {
-                            int cy = y + (int)Math.Round(len * fraction);
-                            int cx = x + thick / 2;
-                            g.FillEllipse(db, cx - radius, cy - radius,
-                                EdgeMetrics.ParentDotDiameter, EdgeMetrics.ParentDotDiameter);
-                        }
-                        else
-                        {
-                            int cx = x + (int)Math.Round(len * fraction);
-                            int cy = y + thick / 2;
-                            g.FillEllipse(db, cx - radius, cy - radius,
-                                EdgeMetrics.ParentDotDiameter, EdgeMetrics.ParentDotDiameter);
-                        }
+                        g.FillEllipse(majorDb, cx - majorRadius, cy - majorRadius,
+                            EdgeMetrics.MajorDotDiameter, EdgeMetrics.MajorDotDiameter);
                     }
                 }
             }
@@ -4175,24 +4138,16 @@ namespace QuotaFloat
         public const int HintMinLength = 8;
         public const int ColorAlphaMax = 255;
 
-        public const int VerticalSegments = 4;
-        public const int HorizontalShortSegments = 5;
-        public const int HorizontalLongSegments = 10;
+        public const int VerticalMajorStep = 20;
+        public const int HorizontalShortMajorStep = 20;
+        public const int HorizontalLongMajorStep = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int ParentDotAlpha = 220;
-        public const int ParentDotDiameter = 3;
-        public const int TenPercentDotAlpha = 150;
-        public const int TenPercentDotDiameter = 1;
-        public const int TenPercentStep = 10;
-        public const int HorizontalLongGrid = 5;
-        public const int HorizontalShortGrid = 10;
-
-        public const int SubTickAlpha = 70;
-        public const float SubTickWidth = 2f;
+        public const int MajorDotAlpha = 185;
+        public const int MajorDotDiameter = 3;
+        public const int MinorDotAlpha = 125;
+        public const int MinorDotDiameter = 2;
+        public const int MinorStepDivisor = 2;
         public const int SegmentRadius = 2;
-        public const int SegmentMinLengthForTicks = 8;
-        public const int SubTickInset = 1;
-        public const int SubTickEndInset = 2;
     }
 
     internal static class DemoData

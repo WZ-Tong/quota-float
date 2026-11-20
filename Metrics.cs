@@ -190,24 +190,16 @@ namespace QuotaFloat
         public const int HintMinLength = 8;
         public const int ColorAlphaMax = 255;
 
-        public const int VerticalSegments = 4;
-        public const int HorizontalShortSegments = 5;
-        public const int HorizontalLongSegments = 10;
+        public const int VerticalMajorStep = 20;
+        public const int HorizontalShortMajorStep = 20;
+        public const int HorizontalLongMajorStep = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int ParentDotAlpha = 220;
-        public const int ParentDotDiameter = 3;
-        public const int TenPercentDotAlpha = 150;
-        public const int TenPercentDotDiameter = 1;
-        public const int TenPercentStep = 10;
-        public const int HorizontalLongGrid = 5;
-        public const int HorizontalShortGrid = 10;
-
-        public const int SubTickAlpha = 70;
-        public const float SubTickWidth = 2f;
+        public const int MajorDotAlpha = 185;
+        public const int MajorDotDiameter = 3;
+        public const int MinorDotAlpha = 125;
+        public const int MinorDotDiameter = 2;
+        public const int MinorStepDivisor = 2;
         public const int SegmentRadius = 2;
-        public const int SegmentMinLengthForTicks = 8;
-        public const int SubTickInset = 1;
-        public const int SubTickEndInset = 2;
     }
 
     internal static class DemoData
