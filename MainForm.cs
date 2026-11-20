@@ -522,6 +522,7 @@ namespace QuotaFloat
             l.Font = new Font(UiMetrics.FontFamily, size, style);
             l.ForeColor = color;
             l.BackColor = Color.Transparent;
+            l.AutoEllipsis = true;
             return l;
         }
 

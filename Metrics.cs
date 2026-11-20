@@ -51,7 +51,7 @@ namespace QuotaFloat
 
         public const int EquationTop = 26;
         public const int EquationHeight = 44;
-        public const int EquationLabelHeight = 24;
+        public const int EquationLabelHeight = 26;
         public const int EquationFieldNone = 0;
         public const int EquationFieldSpent = 1;
         public const int EquationFieldTotal = 2;
@@ -93,7 +93,7 @@ namespace QuotaFloat
         public const int UsageSuffixLeft = 62;
         public const int UsageSuffixMinWidth = 10;
         public const int UsagePercentWidth = 84;
-        public const int UsageTextHeight = 16;
+        public const int UsageTextHeight = 18;
         public const int UsageBarTop = 20;
         public const int UsageBarHeight = 4;
         public const int UsageBarMinWidth = 3;
@@ -132,7 +132,7 @@ namespace QuotaFloat
         public const int SettingsButtonHeight = 30;
         public const int SettingsSaveLeft = 232;
         public const int SettingsCancelLeft = 332;
-        public const int SettingsLabelHeight = 18;
+        public const int SettingsLabelHeight = 20;
         public const int SettingsInputHeight = 24;
 
         public const int WideDemoWidth = 700;

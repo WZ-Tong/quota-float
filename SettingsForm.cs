@@ -116,6 +116,7 @@ namespace QuotaFloat
             l.Bounds = new Rectangle(x, y, w, UiMetrics.SettingsLabelHeight);
             l.ForeColor = Palette.Sub;
             l.BackColor = Color.Transparent;
+            l.AutoEllipsis = true;
             Controls.Add(l);
             return l;
         }
