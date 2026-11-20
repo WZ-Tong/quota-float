@@ -153,6 +153,7 @@ namespace QuotaFloat
             Label dsTitle = NewLabel("DeepSeek", UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.DeepSeekTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
+            dsTitle.TextAlign = ContentAlignment.MiddleLeft;
             dsCard.Controls.Add(dsTitle);
 
             deepSeekPeriod = NewLabel("", dsCard.Width - UiMetrics.DeepSeekPeriodRightInset,
@@ -254,6 +255,7 @@ namespace QuotaFloat
             Label goTitle = NewLabel("OpenCode", UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.GoTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
+            goTitle.TextAlign = ContentAlignment.MiddleLeft;
             goCard.Controls.Add(goTitle);
 
             goRefreshButton = new RefreshButton();

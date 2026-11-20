@@ -362,8 +362,10 @@ namespace QuotaFloat
         private const float PenWidthRatio = 0.09f;
         private const float ArcStartDegrees = 35f;
         private const float ArcSweepDegrees = 280f;
-        private const float ArrowLengthRatio = 0.32f;
-        private const float ArrowHalfWidthRatio = 0.20f;
+        private const float ArrowLengthRatio = 0.24f;
+        private const float ArrowHalfWidthRatio = 0.15f;
+        private const float ArrowTipRatio = 0.45f;
+        private const float ArrowBaseRatio = 0.55f;
 
         private bool busy;
         private bool hover;
@@ -449,14 +451,24 @@ namespace QuotaFloat
                 PointF normal = new PointF(-tangent.Y, tangent.X);
                 float arrowLength = size * ArrowLengthRatio;
                 float arrowHalfWidth = size * ArrowHalfWidthRatio;
+                PointF tip = new PointF(
+                    end.X + tangent.X * arrowLength * ArrowTipRatio,
+                    end.Y + tangent.Y * arrowLength * ArrowTipRatio);
+                PointF baseCenter = new PointF(
+                    end.X - tangent.X * arrowLength * ArrowBaseRatio,
+                    end.Y - tangent.Y * arrowLength * ArrowBaseRatio);
                 PointF first = new PointF(
-                    end.X - tangent.X * arrowLength + normal.X * arrowHalfWidth,
-                    end.Y - tangent.Y * arrowLength + normal.Y * arrowHalfWidth);
+                    baseCenter.X + normal.X * arrowHalfWidth,
+                    baseCenter.Y + normal.Y * arrowHalfWidth);
                 PointF second = new PointF(
-                    end.X - tangent.X * arrowLength - normal.X * arrowHalfWidth,
-                    end.Y - tangent.Y * arrowLength - normal.Y * arrowHalfWidth);
-                g.DrawLine(pen, end, first);
-                g.DrawLine(pen, end, second);
+                    baseCenter.X - normal.X * arrowHalfWidth,
+                    baseCenter.Y - normal.Y * arrowHalfWidth);
+                using (GraphicsPath arrow = new GraphicsPath())
+                {
+                    arrow.AddPolygon(new PointF[] { tip, first, second });
+                    using (SolidBrush arrowBrush = new SolidBrush(color))
+                        g.FillPath(arrowBrush, arrow);
+                }
                 g.Restore(state);
             }
         }
@@ -1024,6 +1036,7 @@ namespace QuotaFloat
             Label dsTitle = NewLabel("DeepSeek", UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.DeepSeekTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
+            dsTitle.TextAlign = ContentAlignment.MiddleLeft;
             dsCard.Controls.Add(dsTitle);
 
             deepSeekPeriod = NewLabel("", dsCard.Width - UiMetrics.DeepSeekPeriodRightInset,
@@ -1125,6 +1138,7 @@ namespace QuotaFloat
             Label goTitle = NewLabel("OpenCode", UiMetrics.CardTextInset, UiMetrics.TitleTop,
                 UiMetrics.GoTitleWidth, UiMetrics.TitleHeight, UiMetrics.FontCaption,
                 FontStyle.Regular, Palette.Sub);
+            goTitle.TextAlign = ContentAlignment.MiddleLeft;
             goCard.Controls.Add(goTitle);
 
             goRefreshButton = new RefreshButton();
@@ -3470,12 +3484,12 @@ namespace QuotaFloat
         public const int InitialWindowRightInset = 24;
         public const int InitialWindowTop = 80;
 
-        public const int TitleTop = 8;
-        public const int TitleHeight = 16;
         public const int TitleButtonSize = 18;
+        public const int TitleButtonTop = 7;
+        public const int TitleHeight = TitleButtonSize;
+        public const int TitleTop = TitleButtonTop;
         public const int TitleButtonRightInset = CardTextInset;
         public const int TitleButtonGap = 4;
-        public const int TitleButtonTop = TitleTop - (TitleButtonSize - TitleHeight) / 2;
         public const int DeepSeekTitleWidth = 120;
         public const int DeepSeekPeriodWidth = 86;
         public const int DeepSeekPeriodRightInset =

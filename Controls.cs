@@ -152,8 +152,10 @@ namespace QuotaFloat
         private const float PenWidthRatio = 0.09f;
         private const float ArcStartDegrees = 35f;
         private const float ArcSweepDegrees = 280f;
-        private const float ArrowLengthRatio = 0.32f;
-        private const float ArrowHalfWidthRatio = 0.20f;
+        private const float ArrowLengthRatio = 0.24f;
+        private const float ArrowHalfWidthRatio = 0.15f;
+        private const float ArrowTipRatio = 0.45f;
+        private const float ArrowBaseRatio = 0.55f;
 
         private bool busy;
         private bool hover;
@@ -239,14 +241,24 @@ namespace QuotaFloat
                 PointF normal = new PointF(-tangent.Y, tangent.X);
                 float arrowLength = size * ArrowLengthRatio;
                 float arrowHalfWidth = size * ArrowHalfWidthRatio;
+                PointF tip = new PointF(
+                    end.X + tangent.X * arrowLength * ArrowTipRatio,
+                    end.Y + tangent.Y * arrowLength * ArrowTipRatio);
+                PointF baseCenter = new PointF(
+                    end.X - tangent.X * arrowLength * ArrowBaseRatio,
+                    end.Y - tangent.Y * arrowLength * ArrowBaseRatio);
                 PointF first = new PointF(
-                    end.X - tangent.X * arrowLength + normal.X * arrowHalfWidth,
-                    end.Y - tangent.Y * arrowLength + normal.Y * arrowHalfWidth);
+                    baseCenter.X + normal.X * arrowHalfWidth,
+                    baseCenter.Y + normal.Y * arrowHalfWidth);
                 PointF second = new PointF(
-                    end.X - tangent.X * arrowLength - normal.X * arrowHalfWidth,
-                    end.Y - tangent.Y * arrowLength - normal.Y * arrowHalfWidth);
-                g.DrawLine(pen, end, first);
-                g.DrawLine(pen, end, second);
+                    baseCenter.X - normal.X * arrowHalfWidth,
+                    baseCenter.Y - normal.Y * arrowHalfWidth);
+                using (GraphicsPath arrow = new GraphicsPath())
+                {
+                    arrow.AddPolygon(new PointF[] { tip, first, second });
+                    using (SolidBrush arrowBrush = new SolidBrush(color))
+                        g.FillPath(arrowBrush, arrow);
+                }
                 g.Restore(state);
             }
         }

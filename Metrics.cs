@@ -34,12 +34,12 @@ namespace QuotaFloat
         public const int InitialWindowRightInset = 24;
         public const int InitialWindowTop = 80;
 
-        public const int TitleTop = 8;
-        public const int TitleHeight = 16;
         public const int TitleButtonSize = 18;
+        public const int TitleButtonTop = 7;
+        public const int TitleHeight = TitleButtonSize;
+        public const int TitleTop = TitleButtonTop;
         public const int TitleButtonRightInset = CardTextInset;
         public const int TitleButtonGap = 4;
-        public const int TitleButtonTop = TitleTop - (TitleButtonSize - TitleHeight) / 2;
         public const int DeepSeekTitleWidth = 120;
         public const int DeepSeekPeriodWidth = 86;
         public const int DeepSeekPeriodRightInset =
