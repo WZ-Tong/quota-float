@@ -24,10 +24,10 @@ namespace QuotaFloat
             return edgeHidden ? Timing.HiddenRefreshSeconds : Timing.VisibleRefreshSeconds;
         }
 
-        private double SecondsSinceFetch()
+        private double SecondsSince(long stamp)
         {
-            if (lastFetchStamp == Timing.NoStamp) return double.MaxValue;
-            return ElapsedSeconds(lastFetchStamp);
+            if (stamp == Timing.NoStamp) return double.MaxValue;
+            return ElapsedSeconds(stamp);
         }
 
         private double ElapsedSeconds(long stamp)
@@ -41,64 +41,172 @@ namespace QuotaFloat
             return ElapsedSeconds(stamp) * Timing.MillisecondsPerSecond;
         }
 
+        private double OldestFetchAgeSeconds()
+        {
+            double age = -1.0;
+            if (lastDeepSeekFetchStamp != Timing.NoStamp)
+                age = SecondsSince(lastDeepSeekFetchStamp);
+            if (lastOpenCodeFetchStamp != Timing.NoStamp)
+            {
+                double goAge = SecondsSince(lastOpenCodeFetchStamp);
+                if (age < 0.0 || goAge > age) age = goAge;
+            }
+            return age;
+        }
+
+        private float NextRefreshFraction()
+        {
+            int interval = CurrentRefreshSeconds();
+            float fraction = 1f;
+            bool any = false;
+            if (cfg.DeepSeekKey.Length > 0)
+            {
+                fraction = Math.Min(fraction, RemainingFraction(lastDeepSeekFetchStamp, interval));
+                any = true;
+            }
+            if (cfg.OpenCodeKey.Length > 0)
+            {
+                fraction = Math.Min(fraction, RemainingFraction(lastOpenCodeFetchStamp, interval));
+                any = true;
+            }
+            return any ? fraction : 1f;
+        }
+
+        private float RemainingFraction(long stamp, int interval)
+        {
+            if (stamp == Timing.NoStamp) return 0f;
+            double remaining = 1.0 - SecondsSince(stamp) / interval;
+            return (float)Math.Max(0.0, Math.Min(1.0, remaining));
+        }
+
+        private void StartDueFetches()
+        {
+            int interval = CurrentRefreshSeconds();
+            if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
+                SecondsSince(lastDeepSeekFetchStamp) >= interval)
+                StartDeepSeekFetch();
+            if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
+                SecondsSince(lastOpenCodeFetchStamp) >= interval)
+                StartOpenCodeFetch();
+        }
+
         private void RefreshIfStaleOnReveal()
         {
-            if (demoMode || refreshingPaused || fetching) return;
-            if (SecondsSinceFetch() >= Timing.RevealRefreshMinAgeSeconds) StartFetch();
+            if (demoMode || refreshingPaused) return;
+            if (cfg.DeepSeekKey.Length > 0 && !fetchingDeepSeek &&
+                SecondsSince(lastDeepSeekFetchStamp) >= Timing.RevealRefreshMinAgeSeconds)
+                StartDeepSeekFetch();
+            if (cfg.OpenCodeKey.Length > 0 && !fetchingOpenCode &&
+                SecondsSince(lastOpenCodeFetchStamp) >= Timing.RevealRefreshMinAgeSeconds)
+                StartOpenCodeFetch();
         }
 
         private void StartFetch()
         {
-            if (fetching) return;
-            fetching = true;
-            fetchStartStamp = clock.ElapsedTicks;
-            refreshBar.Indeterminate = true;
-            refreshBar.Phase = 0f;
-            refreshBar.Invalidate();
+            StartDeepSeekFetch();
+            StartOpenCodeFetch();
+        }
 
-            string dsKey = cfg.DeepSeekKey;
-            string goKey = cfg.OpenCodeKey;
+        private void StartDeepSeekFetch()
+        {
+            if (fetchingDeepSeek) return;
+            fetchingDeepSeek = true;
+            dsRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
 
-            if (string.IsNullOrEmpty(dsKey) && string.IsNullOrEmpty(goKey))
+            string key = cfg.DeepSeekKey;
+            if (string.IsNullOrEmpty(key))
             {
-                ApplyFetch(new FetchResult(new DeepSeekState(), new GoState()));
+                ApplyDeepSeek(new DeepSeekState());
                 return;
             }
 
-            Task<FetchResult>.Factory.StartNew(delegate
+            Task<DeepSeekState>.Factory.StartNew(delegate
             {
-                DeepSeekState ds = FetchDeepSeek(dsKey);
-                GoState go = FetchGo(goKey);
-                return new FetchResult(ds, go);
-            }).ContinueWith(delegate(Task<FetchResult> t)
+                return FetchDeepSeek(key);
+            }).ContinueWith(delegate(Task<DeepSeekState> t)
             {
                 try
                 {
                     if (IsDisposed || !IsHandleCreated) return;
                     BeginInvoke(new Action(delegate
                     {
+                        DeepSeekState state;
                         if (t.IsFaulted || t.IsCanceled)
-                            ApplyFetch(new FetchResult(
-                                new DeepSeekState { Configured = dsKey.Length > 0, Error = Strings.QueryFailed },
-                                new GoState { Configured = goKey.Length > 0, Error = Strings.QueryFailed }));
+                            state = new DeepSeekState
+                            {
+                                Configured = key.Length > 0,
+                                Error = Strings.QueryFailed
+                            };
                         else
-                            ApplyFetch(t.Result);
+                            state = t.Result;
+                        ApplyDeepSeek(state);
                     }));
                 }
                 catch { }
             });
         }
 
-        private void ApplyFetch(FetchResult r)
+        private void StartOpenCodeFetch()
+        {
+            if (fetchingOpenCode) return;
+            fetchingOpenCode = true;
+            goRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
+
+            string key = cfg.OpenCodeKey;
+            if (string.IsNullOrEmpty(key))
+            {
+                ApplyOpenCode(new GoState());
+                return;
+            }
+
+            Task<GoState>.Factory.StartNew(delegate
+            {
+                return FetchGo(key);
+            }).ContinueWith(delegate(Task<GoState> t)
+            {
+                try
+                {
+                    if (IsDisposed || !IsHandleCreated) return;
+                    BeginInvoke(new Action(delegate
+                    {
+                        GoState state;
+                        if (t.IsFaulted || t.IsCanceled)
+                            state = new GoState
+                            {
+                                Configured = key.Length > 0,
+                                Error = Strings.QueryFailed
+                            };
+                        else
+                            state = t.Result;
+                        ApplyOpenCode(state);
+                    }));
+                }
+                catch { }
+            });
+        }
+
+        private void UpdateFetchUi()
+        {
+            bool any = AnyFetching;
+            refreshBar.Indeterminate = any;
+            if (any)
+            {
+                refreshBar.Phase = (float)((clock.ElapsedMilliseconds %
+                    Timing.ShimmerPeriodMilliseconds) / (double)Timing.ShimmerPeriodMilliseconds);
+            }
+            refreshBar.Invalidate();
+        }
+
+        private void ApplyDeepSeek(DeepSeekState ds)
         {
             if (IsDisposed) return;
-            fetching = false;
-            lastFetchStamp = clock.ElapsedTicks;
-            fetchStartStamp = Timing.NoStamp;
-            refreshBar.Indeterminate = false;
-            refreshBar.Invalidate();
+            fetchingDeepSeek = false;
+            lastDeepSeekFetchStamp = clock.ElapsedTicks;
+            dsRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
 
-            DeepSeekState ds = r.DeepSeek;
             if (!ds.Configured)
             {
                 if (editingField != UiMetrics.EquationFieldNone) EndEdit(false);
@@ -140,7 +248,17 @@ namespace QuotaFloat
                 }
             }
 
-            GoState go = r.Go;
+            if (edgeHidden || hintAlpha > 0f) Invalidate();
+        }
+
+        private void ApplyOpenCode(GoState go)
+        {
+            if (IsDisposed) return;
+            fetchingOpenCode = false;
+            lastOpenCodeFetchStamp = clock.ElapsedTicks;
+            goRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
+
             ApplyRow(row5h, go, go.Rolling);
             ApplyRow(rowWeek, go, go.Weekly);
             ApplyRow(rowMonth, go, go.Monthly);

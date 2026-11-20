@@ -146,6 +146,112 @@ namespace QuotaFloat
         }
     }
 
+    internal sealed class RefreshButton : Control
+    {
+        private const float IconInsetRatio = 0.18f;
+        private const float PenWidthRatio = 0.09f;
+        private const float ArcStartDegrees = 35f;
+        private const float ArcSweepDegrees = 280f;
+        private const float ArrowLengthRatio = 0.32f;
+        private const float ArrowHalfWidthRatio = 0.20f;
+
+        private bool busy;
+        private bool hover;
+        private long spinStartMilliseconds;
+        private float angle;
+
+        public RefreshButton()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            Cursor = Cursors.Hand;
+            TabStop = false;
+            AccessibleRole = AccessibleRole.PushButton;
+        }
+
+        public bool Busy
+        {
+            get { return busy; }
+        }
+
+        public void SetBusy(bool value, long nowMilliseconds)
+        {
+            if (busy == value) return;
+            busy = value;
+            spinStartMilliseconds = nowMilliseconds;
+            angle = 0f;
+            Invalidate();
+        }
+
+        public bool AdvanceAnimation(long nowMilliseconds)
+        {
+            if (!busy) return false;
+            double elapsed = nowMilliseconds - spinStartMilliseconds;
+            angle = (float)((elapsed % Timing.RefreshSpinPeriodMilliseconds) /
+                Timing.RefreshSpinPeriodMilliseconds * 360.0);
+            return true;
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            hover = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            hover = false;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float size = Math.Min(ClientSize.Width, ClientSize.Height);
+            if (size <= 0f) return;
+
+            Color color = busy ? Palette.Blue : (hover ? Palette.Text : Palette.Sub);
+            float cx = ClientSize.Width / 2f;
+            float cy = ClientSize.Height / 2f;
+            float inset = size * IconInsetRatio;
+            RectangleF arc = new RectangleF(inset, inset, size - inset * 2f, size - inset * 2f);
+            using (Pen pen = new Pen(color, Math.Max(1f, size * PenWidthRatio)))
+            {
+                pen.StartCap = LineCap.Round;
+                pen.EndCap = LineCap.Round;
+                GraphicsState state = g.Save();
+                g.TranslateTransform(cx, cy);
+                g.RotateTransform(angle);
+                g.TranslateTransform(-cx, -cy);
+                g.DrawArc(pen, arc, ArcStartDegrees, ArcSweepDegrees);
+
+                double radians = (ArcStartDegrees + ArcSweepDegrees) * Math.PI / 180.0;
+                PointF end = new PointF(
+                    cx + (float)(Math.Cos(radians) * arc.Width / 2.0),
+                    cy + (float)(Math.Sin(radians) * arc.Height / 2.0));
+                PointF tangent = new PointF(
+                    (float)(-Math.Sin(radians)), (float)Math.Cos(radians));
+                PointF normal = new PointF(-tangent.Y, tangent.X);
+                float arrowLength = size * ArrowLengthRatio;
+                float arrowHalfWidth = size * ArrowHalfWidthRatio;
+                PointF first = new PointF(
+                    end.X - tangent.X * arrowLength + normal.X * arrowHalfWidth,
+                    end.Y - tangent.Y * arrowLength + normal.Y * arrowHalfWidth);
+                PointF second = new PointF(
+                    end.X - tangent.X * arrowLength - normal.X * arrowHalfWidth,
+                    end.Y - tangent.Y * arrowLength - normal.Y * arrowHalfWidth);
+                g.DrawLine(pen, end, first);
+                g.DrawLine(pen, end, second);
+                g.Restore(state);
+            }
+        }
+    }
+
     internal sealed class UsageRow : Control
     {
         public string Caption = "";

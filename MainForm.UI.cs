@@ -247,7 +247,7 @@ namespace QuotaFloat
                     if (c.BackColor == oldCard) c.BackColor = Palette.Card;
                     if (c.ForeColor == oldText) c.ForeColor = Palette.Text;
                 }
-                else if (c is Card || c is UsageRow || c is MiniBar || c is Panel)
+                else if (c is Card || c is UsageRow || c is MiniBar || c is RefreshButton || c is Panel)
                 {
                     if (c == refreshBar) c.BackColor = Palette.Bg;
                     else if (c.BackColor == oldCard) c.BackColor = Palette.Card;
@@ -320,7 +320,8 @@ namespace QuotaFloat
 
             if (!demoMode)
             {
-                lastFetchStamp = Timing.NoStamp;
+                lastDeepSeekFetchStamp = Timing.NoStamp;
+                lastOpenCodeFetchStamp = Timing.NoStamp;
                 StartFetch();
             }
             Invalidate(true);
@@ -360,7 +361,8 @@ namespace QuotaFloat
         // ---------- 调试 ----------
         private void ApplyDemo()
         {
-            lastFetchStamp = clock.ElapsedTicks;
+            lastDeepSeekFetchStamp = clock.ElapsedTicks;
+            lastOpenCodeFetchStamp = clock.ElapsedTicks;
             lastDeepSeekBalance = DemoData.DeepSeekBalance;
             lastDeepSeekCurrency = "CNY";
             lastDeepSeekBalanceKnown = true;
@@ -422,6 +424,7 @@ namespace QuotaFloat
         private void AttachDrag(Control c)
         {
             if (c == equationPanel) return;
+            if (c is RefreshButton) return;
             if (!(c is TextBox)) c.MouseDown += DragWindow;
             foreach (Control child in c.Controls)
             {

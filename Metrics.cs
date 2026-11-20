@@ -36,9 +36,14 @@ namespace QuotaFloat
 
         public const int TitleTop = 8;
         public const int TitleHeight = 16;
+        public const int TitleButtonSize = 18;
+        public const int TitleButtonRightInset = CardTextInset;
+        public const int TitleButtonGap = 4;
+        public const int TitleButtonTop = TitleTop - (TitleButtonSize - TitleHeight) / 2;
         public const int DeepSeekTitleWidth = 120;
         public const int DeepSeekPeriodWidth = 86;
-        public const int DeepSeekPeriodRightInset = CardTextInset + DeepSeekPeriodWidth;
+        public const int DeepSeekPeriodRightInset =
+            TitleButtonRightInset + TitleButtonSize + TitleButtonGap + DeepSeekPeriodWidth;
         public const int DeepSeekStatusTop = 30;
         public const int DeepSeekStatusHeight = 24;
         public const int DeepSeekBalanceTop = 26;
@@ -143,6 +148,7 @@ namespace QuotaFloat
         public const int EdgeTickMilliseconds = 120;
         public const int FallbackFrameIntervalMilliseconds = 16;
         public const int ShimmerPeriodMilliseconds = 1100;
+        public const int RefreshSpinPeriodMilliseconds = 900;
         public const int DataBarAnimationMilliseconds = 320;
         public const float DataBarAnimationMinDeltaPercent = 1f;
         public const int SlideDurationMilliseconds = 180;

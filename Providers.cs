@@ -41,11 +41,4 @@ namespace QuotaFloat
         public GoWindow Weekly = new GoWindow();
         public GoWindow Monthly = new GoWindow();
     }
-
-    internal sealed class FetchResult
-    {
-        public DeepSeekState DeepSeek;
-        public GoState Go;
-        public FetchResult(DeepSeekState ds, GoState go) { DeepSeek = ds; Go = go; }
-    }
 }

@@ -58,12 +58,16 @@ namespace QuotaFloat
         private readonly UsageRow row5h;
         private readonly UsageRow rowWeek;
         private readonly UsageRow rowMonth;
+        private readonly RefreshButton dsRefreshButton;
+        private readonly RefreshButton goRefreshButton;
+        private readonly ToolTip tips = new ToolTip();
         private ContextMenuStrip menu;
         private ToolStripMenuItem edgeHideItem;
 
-        private bool fetching;
-        private long lastFetchStamp = Timing.NoStamp;
-        private long fetchStartStamp = Timing.NoStamp;
+        private bool fetchingDeepSeek;
+        private bool fetchingOpenCode;
+        private long lastDeepSeekFetchStamp = Timing.NoStamp;
+        private long lastOpenCodeFetchStamp = Timing.NoStamp;
         private bool placed;
         private bool? peakState;
         private bool refreshingPaused;
@@ -94,6 +98,11 @@ namespace QuotaFloat
         private int displayRefreshHz = Timing.DefaultRefreshHz;
         private bool highResolutionTimer;
         private bool captureExcluded;
+
+        private bool AnyFetching
+        {
+            get { return fetchingDeepSeek || fetchingOpenCode; }
+        }
 
         private DateTime lastHeaderClick = DateTime.MinValue;
         private int headerClicks;
@@ -151,6 +160,15 @@ namespace QuotaFloat
                 UiMetrics.FontSmall, FontStyle.Regular, Palette.Sub);
             deepSeekPeriod.TextAlign = ContentAlignment.MiddleRight;
             dsCard.Controls.Add(deepSeekPeriod);
+
+            dsRefreshButton = new RefreshButton();
+            dsRefreshButton.Bounds = new Rectangle(
+                dsCard.Width - UiMetrics.TitleButtonRightInset - UiMetrics.TitleButtonSize,
+                UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
+            dsRefreshButton.AccessibleName = Strings.RefreshDeepSeek;
+            dsRefreshButton.Click += delegate { StartDeepSeekFetch(); };
+            tips.SetToolTip(dsRefreshButton, Strings.RefreshDeepSeekTip);
+            dsCard.Controls.Add(dsRefreshButton);
 
             deepSeekStatus = NewLabel(Strings.Loading, UiMetrics.CardTextInset,
                 UiMetrics.DeepSeekStatusTop, dsCard.Width - UiMetrics.CardContentInset,
@@ -238,6 +256,15 @@ namespace QuotaFloat
                 FontStyle.Regular, Palette.Sub);
             goCard.Controls.Add(goTitle);
 
+            goRefreshButton = new RefreshButton();
+            goRefreshButton.Bounds = new Rectangle(
+                goCard.Width - UiMetrics.TitleButtonRightInset - UiMetrics.TitleButtonSize,
+                UiMetrics.TitleButtonTop, UiMetrics.TitleButtonSize, UiMetrics.TitleButtonSize);
+            goRefreshButton.AccessibleName = Strings.RefreshOpenCode;
+            goRefreshButton.Click += delegate { StartOpenCodeFetch(); };
+            tips.SetToolTip(goRefreshButton, Strings.RefreshOpenCodeTip);
+            goCard.Controls.Add(goRefreshButton);
+
             row5h = NewRow(Strings.FiveHours, UiMetrics.CardTextInset, UiMetrics.GoRowTop,
                 goCard.Width - UiMetrics.CardContentInset);
             rowWeek = NewRow(Strings.ThisWeek, UiMetrics.CardTextInset,
@@ -294,9 +321,7 @@ namespace QuotaFloat
                 rowWeek.Invalidate();
                 rowMonth.Invalidate();
                 if (edgeHidden || hintAlpha > 0f) Invalidate();
-                if (!demoMode && !refreshingPaused && !fetching &&
-                    SecondsSinceFetch() >= CurrentRefreshSeconds())
-                    StartFetch();
+                if (!demoMode && !refreshingPaused) StartDueFetches();
             };
 
             barTimer = new Timer();
@@ -308,24 +333,20 @@ namespace QuotaFloat
                 if (row5h.AdvanceAnimation(nowMilliseconds)) row5h.Invalidate();
                 if (rowWeek.AdvanceAnimation(nowMilliseconds)) rowWeek.Invalidate();
                 if (rowMonth.AdvanceAnimation(nowMilliseconds)) rowMonth.Invalidate();
+                if (dsRefreshButton.AdvanceAnimation(nowMilliseconds)) dsRefreshButton.Invalidate();
+                if (goRefreshButton.AdvanceAnimation(nowMilliseconds)) goRefreshButton.Invalidate();
 
-                if (fetching)
+                if (AnyFetching)
                 {
                     refreshBar.Indeterminate = true;
-                    double shimmerMs = ElapsedMilliseconds(fetchStartStamp);
-                    refreshBar.Phase = (float)((shimmerMs % Timing.ShimmerPeriodMilliseconds) /
-                        Timing.ShimmerPeriodMilliseconds);
+                    refreshBar.Phase = (float)((nowMilliseconds % Timing.ShimmerPeriodMilliseconds) /
+                        (double)Timing.ShimmerPeriodMilliseconds);
                     refreshBar.Invalidate();
                     return;
                 }
 
                 refreshBar.Indeterminate = false;
-                float remain = 1f;
-                if (lastFetchStamp != Timing.NoStamp)
-                    remain = 1f - (float)SecondsSinceFetch() / CurrentRefreshSeconds();
-                if (remain < 0f) remain = 0f;
-                if (remain > 1f) remain = 1f;
-                refreshBar.Percent = remain * UiMetrics.PercentMax;
+                refreshBar.Percent = NextRefreshFraction() * UiMetrics.PercentMax;
                 refreshBar.Invalidate();
             };
 
@@ -523,6 +544,12 @@ namespace QuotaFloat
             if (deepSeekStatus != null) deepSeekStatus.Width = dsCard.Width - UiMetrics.CardContentInset;
             if (deepSeekBalanceOnly != null) deepSeekBalanceOnly.Width = dsCard.Width - UiMetrics.CardContentInset;
             if (deepSeekPeriod != null) deepSeekPeriod.Left = dsCard.Width - UiMetrics.DeepSeekPeriodRightInset;
+            if (dsRefreshButton != null)
+                dsRefreshButton.Left = dsCard.Width - UiMetrics.TitleButtonRightInset -
+                    UiMetrics.TitleButtonSize;
+            if (goRefreshButton != null)
+                goRefreshButton.Left = goCard.Width - UiMetrics.TitleButtonRightInset -
+                    UiMetrics.TitleButtonSize;
             if (row5h != null && rowWeek != null && rowMonth != null)
             {
                 int rowWidth = goCard.Width - UiMetrics.CardContentInset;

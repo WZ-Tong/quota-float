@@ -59,8 +59,12 @@ namespace QuotaFloat
             return IsZh ? "耗尽 · " + countdown : "Exhausted · " + countdown;
         }
 
-        public static string RefreshNow { get { return T("立即刷新", "Refresh now"); } }
-        public static string RefreshNowTip { get { return T("立即查询已启用的服务", "Query enabled services now"); } }
+        public static string RefreshNow { get { return T("全部刷新", "Refresh all"); } }
+        public static string RefreshNowTip { get { return T("同时刷新 DeepSeek 与 OpenCode", "Refresh DeepSeek and OpenCode"); } }
+        public static string RefreshDeepSeek { get { return T("刷新 DeepSeek", "Refresh DeepSeek"); } }
+        public static string RefreshDeepSeekTip { get { return T("手动刷新 DeepSeek 余额", "Refresh the DeepSeek balance"); } }
+        public static string RefreshOpenCode { get { return T("刷新 OpenCode", "Refresh OpenCode"); } }
+        public static string RefreshOpenCodeTip { get { return T("手动刷新 OpenCode 额度", "Refresh the OpenCode quota"); } }
         public static string ShowEquation { get { return T("显示余额等式", "Show balance equation"); } }
         public static string ShowEquationTip { get { return T("在 DeepSeek 卡片中显示余额等式", "Show the balance equation in the DeepSeek card"); } }
         public static string ShowDeepSeek { get { return T("显示 DeepSeek", "Show DeepSeek"); } }

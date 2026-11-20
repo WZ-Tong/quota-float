@@ -12,15 +12,17 @@ namespace QuotaFloat
         internal string DebugStatus()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7} lang={8} interval={9} fetching={10} age={11:0.0} hz={12} frame={13} capture={14} highres={15}",
+                "bounds={0},{1},{2},{3} dock={4} hidden={5} hint={6:0.00} topmost={7} lang={8} interval={9} fetching={10} age={11:0.0} hz={12} frame={13} capture={14} highres={15} dsbusy={16} gobusy={17}",
                 Bounds.Left, Bounds.Top, Bounds.Width, Bounds.Height,
                 dockedEdge, edgeHidden ? "True" : "False",
                 hintAlpha, TopMost ? "True" : "False", Strings.Code,
-                CurrentRefreshSeconds(), fetching ? "True" : "False",
-                lastFetchStamp == Timing.NoStamp ? -1.0 : SecondsSinceFetch(),
+                CurrentRefreshSeconds(), AnyFetching ? "True" : "False",
+                OldestFetchAgeSeconds(),
                 displayRefreshHz, frameIntervalMilliseconds,
                 captureExcluded ? "excluded" : "visible",
-                highResolutionTimer ? "on" : "off");
+                highResolutionTimer ? "on" : "off",
+                fetchingDeepSeek ? "True" : "False",
+                fetchingOpenCode ? "True" : "False");
         }
 
         internal string DebugMenu()

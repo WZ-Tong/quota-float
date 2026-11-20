@@ -299,6 +299,7 @@ namespace QuotaFloat
             edgeTimer.Stop();
             slideTimer.Stop();
             SetHighResolutionTimer(false);
+            tips.Dispose();
             base.OnFormClosing(e);
         }
 
@@ -320,7 +321,8 @@ namespace QuotaFloat
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
-                        lastFetchStamp = Timing.NoStamp;
+                        lastDeepSeekFetchStamp = Timing.NoStamp;
+                        lastOpenCodeFetchStamp = Timing.NoStamp;
                         StartFetch();
                     }
                 }
