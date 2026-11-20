@@ -82,7 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 仓库内含已编译的 `QuotaFloat.exe`，Releases 中也提供同样的二进制。
 
-每次 GitHub Release 均同时提供两种构建，来源为同一提交：`QuotaFloat.exe` 为正式版，`QuotaFloat.debug.exe` 为控制台调试版，并附带 `QuotaFloat.debug.pdb` 符号文件。
+每次 GitHub Release 仅提供两个构建文件，来源为同一提交：`QuotaFloat.exe` 为正式版，`QuotaFloat.debug.exe` 为控制台调试版；`.pdb` 仅供本地调试，不作为 Release 资产。
 
 ## 调试
 
