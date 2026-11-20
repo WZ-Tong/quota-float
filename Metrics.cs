@@ -58,8 +58,8 @@ namespace QuotaFloat
         public const int EquationHorizontalMargin = 10;
         public const int EquationGap = 4;
         public const int EquationGapCount = 4;
-        public const int EquationSymbolWidth = 14;
-        public const int EquationSymbolCount = 2;
+        public const int EquationSymbolInitialWidth = 29;
+        public const int EquationSymbolPadding = 8;
         public const int EquationMinLabelWidth = 8;
         public const int EquationMinValueWidth = 20;
         public const int EquationMinValuesAreaWidth = 30;

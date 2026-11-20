@@ -26,6 +26,8 @@ try {
     Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("menu")
     Start-Sleep -Milliseconds 200
+    $proc.StandardInput.WriteLine("eq")
+    Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("dock right")
     Start-Sleep -Milliseconds 300
     $proc.StandardInput.WriteLine("status")
@@ -61,6 +63,7 @@ try {
     $err = $proc.StandardError.ReadToEnd()
     $lines = @($out -split "`r?`n" | Where-Object { $_ -like "status *" })
     $menus = @($out -split "`r?`n" | Where-Object { $_ -like "menu *" })
+    $equations = @($out -split "`r?`n" | Where-Object { $_ -like "eq *" })
 
     if ($lines.Count -lt 6) {
         Write-Host $out
@@ -138,6 +141,26 @@ try {
     if ($menus[2] -notmatch "English") {
         Write-Host $out
         throw "Chinese menu did not restore English switch: $($menus[2])"
+    }
+    if ($equations.Count -lt 1) {
+        Write-Host $out
+        throw "Equation layout snapshot is missing."
+    }
+    if ($equations[0] -notmatch 'plus=(\d+),(\d+),"\+"') {
+        Write-Host $out
+        throw "Equation plus symbol is missing or clipped: $($equations[0])"
+    }
+    if ([int]$Matches[2] -lt 29) {
+        Write-Host $out
+        throw "Equation plus symbol width is too small: $($equations[0])"
+    }
+    if ($equations[0] -notmatch 'equals=(\d+),(\d+),"="') {
+        Write-Host $out
+        throw "Equation equals symbol is missing or clipped: $($equations[0])"
+    }
+    if ([int]$Matches[2] -lt 29) {
+        Write-Host $out
+        throw "Equation equals symbol width is too small: $($equations[0])"
     }
 
     Write-Host "PASS"

@@ -1176,7 +1176,7 @@ namespace QuotaFloat
             deepSeekBalance.AutoEllipsis = true;
             equationPanel.Controls.Add(deepSeekBalance);
 
-            plusLabel = NewLabel("+", UiMetrics.PlusInitialLeft, 0, UiMetrics.EquationSymbolWidth,
+            plusLabel = NewLabel("+", UiMetrics.PlusInitialLeft, 0, UiMetrics.EquationSymbolInitialWidth,
                 UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             plusLabel.TextAlign = ContentAlignment.MiddleCenter;
             equationPanel.Controls.Add(plusLabel);
@@ -1184,7 +1184,7 @@ namespace QuotaFloat
             spentLabel = NewValueLabel(UiMetrics.SpentInitialLeft, 0, UiMetrics.SpentInitialWidth);
             equationPanel.Controls.Add(spentLabel);
 
-            equalsLabel = NewLabel("=", UiMetrics.EqualsInitialLeft, 0, UiMetrics.EquationSymbolWidth,
+            equalsLabel = NewLabel("=", UiMetrics.EqualsInitialLeft, 0, UiMetrics.EquationSymbolInitialWidth,
                 UiMetrics.EquationLabelHeight, UiMetrics.FontValue, FontStyle.Bold, Palette.Sub);
             equalsLabel.TextAlign = ContentAlignment.MiddleCenter;
             equationPanel.Controls.Add(equalsLabel);
@@ -1563,6 +1563,15 @@ namespace QuotaFloat
             return size.Width + UiMetrics.EquationMeasurePadding;
         }
 
+        private static int MeasureEquationSymbolWidth(Label label)
+        {
+            Size size = TextRenderer.MeasureText(label.Text, label.Font,
+                new Size(int.MaxValue, label.Height),
+                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
+            return Math.Max(UiMetrics.EquationSymbolInitialWidth,
+                size.Width + UiMetrics.EquationSymbolPadding);
+        }
+
         private static void PlaceEquation(Label label, int x, int width)
         {
             if (width < UiMetrics.EquationMinLabelWidth) width = UiMetrics.EquationMinLabelWidth;
@@ -1577,18 +1586,20 @@ namespace QuotaFloat
             int available = equationPanel.Width - UiMetrics.EquationAvailableInset;
             if (available < UiMetrics.EquationMinAvailableWidth) return;
             int gap = UiMetrics.EquationGap;
-            int symbol = UiMetrics.EquationSymbolWidth;
+            int plusWidth = MeasureEquationSymbolWidth(plusLabel);
+            int equalsWidth = MeasureEquationSymbolWidth(equalsLabel);
+            int symbolsWidth = plusWidth + equalsWidth;
 
             int balanceWidth = MeasureEquationWidth(deepSeekBalance);
             int spentWidth = MeasureEquationWidth(spentLabel);
             int totalWidth = MeasureEquationWidth(totalLabel);
-            int needed = balanceWidth + spentWidth + totalWidth + symbol * UiMetrics.EquationSymbolCount + gap * UiMetrics.EquationGapCount;
+            int needed = balanceWidth + spentWidth + totalWidth + symbolsWidth + gap * UiMetrics.EquationGapCount;
             int left = UiMetrics.EquationHorizontalMargin;
 
             if (needed > available)
             {
                 int values = Math.Max(UiMetrics.EquationMinValuesAreaWidth,
-                    available - symbol * UiMetrics.EquationSymbolCount - gap * UiMetrics.EquationGapCount);
+                    available - symbolsWidth - gap * UiMetrics.EquationGapCount);
                 int sum = Math.Max(1, balanceWidth + spentWidth + totalWidth);
                 balanceWidth = Math.Max(UiMetrics.EquationMinValueWidth,
                     (int)Math.Round((double)values * balanceWidth / sum));
@@ -1611,12 +1622,12 @@ namespace QuotaFloat
             int x = left;
             PlaceEquation(deepSeekBalance, x, balanceWidth);
             x += balanceWidth + gap;
-            PlaceEquation(plusLabel, x, symbol);
-            x += symbol + gap;
+            PlaceEquation(plusLabel, x, plusWidth);
+            x += plusWidth + gap;
             PlaceEquation(spentLabel, x, spentWidth);
             x += spentWidth + gap;
-            PlaceEquation(equalsLabel, x, symbol);
-            x += symbol + gap;
+            PlaceEquation(equalsLabel, x, equalsWidth);
+            x += equalsWidth + gap;
             PlaceEquation(totalLabel, x, totalWidth);
         }
 
@@ -2408,10 +2419,12 @@ namespace QuotaFloat
         internal string DebugEquation()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} balance={1},{2},\"{3}\" spent={4},{5},\"{6}\" total={7},{8},\"{9}\"",
+                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\"",
                 equationPanel.Width,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
+                plusLabel.Left, plusLabel.Width, plusLabel.Text,
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
+                equalsLabel.Left, equalsLabel.Width, equalsLabel.Text,
                 totalLabel.Left, totalLabel.Width, totalLabel.Text);
         }
 
@@ -3866,8 +3879,8 @@ namespace QuotaFloat
         public const int EquationHorizontalMargin = 10;
         public const int EquationGap = 4;
         public const int EquationGapCount = 4;
-        public const int EquationSymbolWidth = 14;
-        public const int EquationSymbolCount = 2;
+        public const int EquationSymbolInitialWidth = 29;
+        public const int EquationSymbolPadding = 8;
         public const int EquationMinLabelWidth = 8;
         public const int EquationMinValueWidth = 20;
         public const int EquationMinValuesAreaWidth = 30;

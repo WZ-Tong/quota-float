@@ -36,10 +36,12 @@ namespace QuotaFloat
         internal string DebugEquation()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "eqpanel={0} balance={1},{2},\"{3}\" spent={4},{5},\"{6}\" total={7},{8},\"{9}\"",
+                "eqpanel={0} balance={1},{2},\"{3}\" plus={4},{5},\"{6}\" spent={7},{8},\"{9}\" equals={10},{11},\"{12}\" total={13},{14},\"{15}\"",
                 equationPanel.Width,
                 deepSeekBalance.Left, deepSeekBalance.Width, deepSeekBalance.Text,
+                plusLabel.Left, plusLabel.Width, plusLabel.Text,
                 spentLabel.Left, spentLabel.Width, spentLabel.Text,
+                equalsLabel.Left, equalsLabel.Width, equalsLabel.Text,
                 totalLabel.Left, totalLabel.Width, totalLabel.Text);
         }
 
