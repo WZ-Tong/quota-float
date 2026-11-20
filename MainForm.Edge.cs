@@ -381,93 +381,83 @@ namespace QuotaFloat
             if (y + h > Height) y = Height - h;
 
             int segments;
-            int gap;
             int gridStep;
             if (vertical)
             {
                 segments = EdgeMetrics.VerticalSegments;
-                gap = EdgeMetrics.VerticalGap;
                 gridStep = 0;
             }
             else
             {
                 segments = len >= EdgeMetrics.HorizontalLongThreshold
                     ? EdgeMetrics.HorizontalLongSegments : EdgeMetrics.HorizontalShortSegments;
-                gap = EdgeMetrics.HorizontalGap;
                 gridStep = segments == EdgeMetrics.HorizontalLongSegments
                     ? EdgeMetrics.HorizontalLongGrid : EdgeMetrics.HorizontalShortGrid;
             }
-            double step = (double)UiMetrics.PercentMax / segments;
-            int usable = len - gap * (segments - 1);
-            if (usable < segments)
-            {
-                gap = 0;
-                usable = len;
-            }
-            int segLen = Math.Max(1, usable / segments);
-            int used = segLen * segments + gap * (segments - 1);
-            int origin = (vertical ? y : x) + (len - used) / 2;
-            int bottom = origin + used;
-            int subDivisions = gridStep > 0 ? (UiMetrics.PercentMax / segments) / gridStep : 1;
+
             Color fillColor = Color.FromArgb(a, EdgeDisplayColor());
+            int fillLen = pct > 0
+                ? Math.Max(1, (int)Math.Round(len * pct / (double)UiMetrics.PercentMax))
+                : 0;
+            int subAlpha = (int)Math.Round(EdgeMetrics.SubTickAlpha * hintAlpha);
+            int dotAlpha = (int)Math.Round(EdgeMetrics.ParentDotAlpha * hintAlpha);
+            Color dotColor = Color.FromArgb(dotAlpha, lightTheme ? Color.Black : Color.White);
 
             using (SolidBrush tb = new SolidBrush(Color.FromArgb(a, Palette.Track)))
             using (SolidBrush fb = new SolidBrush(fillColor))
-            using (Pen subTick = new Pen(Color.FromArgb(EdgeMetrics.SubTickAlpha, Palette.Bg),
+            using (Pen subTick = new Pen(Color.FromArgb(subAlpha, Palette.Bg),
                 EdgeMetrics.SubTickWidth))
+            using (SolidBrush db = new SolidBrush(dotColor))
             {
-                for (int i = 0; i < segments; i++)
+                Rectangle bar = new Rectangle(x, y, w, h);
+                using (GraphicsPath tp = Ui.Rounded(bar, EdgeMetrics.SegmentRadius))
+                    g.FillPath(tb, tp);
+
+                if (fillLen > 0)
                 {
-                    Rectangle track;
-                    if (vertical)
-                    {
-                        int blockBottom = bottom - i * (segLen + gap);
-                        track = new Rectangle(x, blockBottom - segLen, thick, segLen);
-                    }
-                    else
-                    {
-                        int blockLeft = origin + i * (segLen + gap);
-                        track = new Rectangle(blockLeft, y, segLen, thick);
-                    }
+                    Rectangle fill = vertical
+                        ? new Rectangle(x, y + h - fillLen, w, fillLen)
+                        : new Rectangle(x, y, fillLen, h);
+                    using (GraphicsPath fp = Ui.Rounded(fill, EdgeMetrics.SegmentRadius))
+                        g.FillPath(fb, fp);
+                }
 
-                    using (GraphicsPath tp = Ui.Rounded(track, EdgeMetrics.SegmentRadius))
-                        g.FillPath(tb, tp);
-
-                    double fraction = Math.Max(0.0, Math.Min(1.0, (pct - i * step) / step));
-                    if (fraction > 0.0)
+                if (gridStep > 0 && len >= EdgeMetrics.SegmentMinLengthForTicks)
+                {
+                    int parentStep = UiMetrics.PercentMax / segments;
+                    for (int p = gridStep; p < UiMetrics.PercentMax; p += gridStep)
                     {
-                        int fillLen = (int)Math.Round(segLen * fraction);
-                        if (fillLen < 1) fillLen = 1;
-                        if (fillLen > segLen) fillLen = segLen;
-
-                        Rectangle fill;
+                        if (p % parentStep == 0) continue;
+                        int pos = (vertical ? y : x) +
+                            (int)Math.Round(len * p / (double)UiMetrics.PercentMax);
                         if (vertical)
-                            fill = new Rectangle(x, track.Bottom - fillLen, thick, fillLen);
+                            g.DrawLine(subTick, x + EdgeMetrics.SubTickInset, pos,
+                                x + thick - EdgeMetrics.SubTickEndInset, pos);
                         else
-                            fill = new Rectangle(track.X, y, fillLen, thick);
-
-                        using (GraphicsPath fp = Ui.Rounded(fill, EdgeMetrics.SegmentRadius))
-                            g.FillPath(fb, fp);
+                            g.DrawLine(subTick, pos, y + EdgeMetrics.SubTickInset,
+                                pos, y + thick - EdgeMetrics.SubTickEndInset);
                     }
+                }
 
-                    if (segLen >= EdgeMetrics.SegmentMinLengthForTicks)
+                if (dotAlpha > 0)
+                {
+                    float radius = EdgeMetrics.ParentDotDiameter / 2f;
+                    for (int i = 1; i < segments; i++)
                     {
-                        for (int j = 1; j < subDivisions; j++)
+                        double fraction = (double)i / segments;
+                        if (vertical)
                         {
-                            if (vertical)
-                            {
-                                int pos = track.Bottom -
-                                    (int)Math.Round(track.Height * (double)j / subDivisions);
-                                g.DrawLine(subTick, x + EdgeMetrics.SubTickInset, pos,
-                                    x + thick - EdgeMetrics.SubTickEndInset, pos);
-                            }
-                            else
-                            {
-                                int pos = track.X +
-                                    (int)Math.Round(track.Width * (double)j / subDivisions);
-                                g.DrawLine(subTick, pos, y + EdgeMetrics.SubTickInset,
-                                    pos, y + thick - EdgeMetrics.SubTickEndInset);
-                            }
+                            int cy = y + (int)Math.Round(len * fraction);
+                            int cx = x + thick / 2;
+                            g.FillEllipse(db, cx - radius, cy - radius,
+                                EdgeMetrics.ParentDotDiameter, EdgeMetrics.ParentDotDiameter);
+                        }
+                        else
+                        {
+                            int cx = x + (int)Math.Round(len * fraction);
+                            int cy = y + thick / 2;
+                            g.FillEllipse(db, cx - radius, cy - radius,
+                                EdgeMetrics.ParentDotDiameter, EdgeMetrics.ParentDotDiameter);
                         }
                     }
                 }

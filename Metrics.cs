@@ -191,11 +191,11 @@ namespace QuotaFloat
         public const int ColorAlphaMax = 255;
 
         public const int VerticalSegments = 4;
-        public const int VerticalGap = 3;
         public const int HorizontalShortSegments = 5;
         public const int HorizontalLongSegments = 10;
         public const int HorizontalLongThreshold = 400;
-        public const int HorizontalGap = 5;
+        public const int ParentDotAlpha = 150;
+        public const int ParentDotDiameter = 2;
         public const int HorizontalLongGrid = 5;
         public const int HorizontalShortGrid = 10;
 

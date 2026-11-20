@@ -21,7 +21,7 @@ try {
     $proc = [System.Diagnostics.Process]::Start($psi)
     $proc.StandardInput.AutoFlush = $true
 
-    Start-Sleep -Milliseconds 1500
+    Start-Sleep -Milliseconds 2500
     $proc.StandardInput.WriteLine("status")
     Start-Sleep -Milliseconds 200
     $proc.StandardInput.WriteLine("menu")
