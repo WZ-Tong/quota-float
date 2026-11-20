@@ -110,6 +110,7 @@ namespace QuotaFloat
         private void StartDeepSeekFetch()
         {
             if (fetchingDeepSeek) return;
+            int version = ++deepSeekRequestVersion;
             fetchingDeepSeek = true;
             dsRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
             UpdateFetchUi();
@@ -131,6 +132,7 @@ namespace QuotaFloat
                     if (IsDisposed || !IsHandleCreated) return;
                     BeginInvoke(new Action(delegate
                     {
+                        if (version != deepSeekRequestVersion) return;
                         DeepSeekState state;
                         if (t.IsFaulted || t.IsCanceled)
                             state = new DeepSeekState
@@ -150,6 +152,7 @@ namespace QuotaFloat
         private void StartOpenCodeFetch()
         {
             if (fetchingOpenCode) return;
+            int version = ++openCodeRequestVersion;
             fetchingOpenCode = true;
             goRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
             UpdateFetchUi();
@@ -171,6 +174,7 @@ namespace QuotaFloat
                     if (IsDisposed || !IsHandleCreated) return;
                     BeginInvoke(new Action(delegate
                     {
+                        if (version != openCodeRequestVersion) return;
                         GoState state;
                         if (t.IsFaulted || t.IsCanceled)
                             state = new GoState
@@ -185,6 +189,22 @@ namespace QuotaFloat
                 }
                 catch { }
             });
+        }
+
+        private void InvalidateDeepSeekFetch()
+        {
+            deepSeekRequestVersion++;
+            fetchingDeepSeek = false;
+            dsRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
+        }
+
+        private void InvalidateOpenCodeFetch()
+        {
+            openCodeRequestVersion++;
+            fetchingOpenCode = false;
+            goRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
         }
 
         private void UpdateFetchUi()

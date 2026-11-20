@@ -306,7 +306,8 @@ namespace QuotaFloat
         private void OpenSettings()
         {
             EnsureEdgeVisible();
-            string oldKey = cfg.DeepSeekKey;
+            string oldDeepSeekKey = cfg.DeepSeekKey;
+            string oldOpenCodeKey = cfg.OpenCodeKey;
             refreshingPaused = true;
             try
             {
@@ -314,13 +315,17 @@ namespace QuotaFloat
                 {
                     if (f.ShowDialog(this) == DialogResult.OK)
                     {
-                        if (cfg.DeepSeekKey != oldKey)
+                        bool deepSeekChanged = cfg.DeepSeekKey != oldDeepSeekKey;
+                        bool openCodeChanged = cfg.OpenCodeKey != oldOpenCodeKey;
+                        if (deepSeekChanged)
                         {
+                            InvalidateDeepSeekFetch();
                             lastDeepSeekBalanceKnown = false;
                             deepSeekStatus.Text = Strings.Loading;
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
+                        if (openCodeChanged) InvalidateOpenCodeFetch();
                         lastDeepSeekFetchStamp = Timing.NoStamp;
                         lastOpenCodeFetchStamp = Timing.NoStamp;
                         StartFetch();
@@ -339,8 +344,22 @@ namespace QuotaFloat
         private void ApplyCaptureVisibility()
         {
             if (!IsHandleCreated) return;
-            uint affinity = cfg.HideFromCapture ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
-            captureExcluded = SetWindowDisplayAffinity(Handle, affinity);
+            uint desired = WDA_NONE;
+            if (cfg.HideFromCapture)
+            {
+                desired = Environment.OSVersion.Version.Build >= CaptureExcludeMinBuild
+                    ? WDA_EXCLUDEFROMCAPTURE : WDA_MONITOR;
+            }
+
+            uint applied = desired;
+            bool appliedOk = SetWindowDisplayAffinity(Handle, applied);
+            if (!appliedOk && desired == WDA_EXCLUDEFROMCAPTURE)
+            {
+                applied = WDA_MONITOR;
+                appliedOk = SetWindowDisplayAffinity(Handle, applied);
+            }
+            captureExcluded = appliedOk && applied != WDA_NONE;
+            captureBlackedOut = appliedOk && applied == WDA_MONITOR;
         }
 
         private void SyncDisplayTiming()

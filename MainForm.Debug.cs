@@ -19,7 +19,7 @@ namespace QuotaFloat
                 CurrentRefreshSeconds(), AnyFetching ? "True" : "False",
                 OldestFetchAgeSeconds(),
                 displayRefreshHz, frameIntervalMilliseconds,
-                captureExcluded ? "excluded" : "visible",
+                captureExcluded ? (captureBlackedOut ? "black" : "excluded") : "visible",
                 highResolutionTimer ? "on" : "off",
                 fetchingDeepSeek ? "True" : "False",
                 fetchingOpenCode ? "True" : "False");

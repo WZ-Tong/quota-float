@@ -909,7 +909,9 @@ namespace QuotaFloat
         private const int WM_THEMECHANGED = 0x031A;
         private const int WS_EX_TOOLWINDOW = 0x80;
         private const uint WDA_NONE = 0x00000000;
+        private const uint WDA_MONITOR = 0x00000001;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+        private const int CaptureExcludeMinBuild = 19041;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -951,6 +953,8 @@ namespace QuotaFloat
 
         private bool fetchingDeepSeek;
         private bool fetchingOpenCode;
+        private int deepSeekRequestVersion;
+        private int openCodeRequestVersion;
         private long lastDeepSeekFetchStamp = Timing.NoStamp;
         private long lastOpenCodeFetchStamp = Timing.NoStamp;
         private bool placed;
@@ -983,6 +987,7 @@ namespace QuotaFloat
         private int displayRefreshHz = Timing.DefaultRefreshHz;
         private bool highResolutionTimer;
         private bool captureExcluded;
+        private bool captureBlackedOut;
 
         private bool AnyFetching
         {
@@ -1564,17 +1569,18 @@ namespace QuotaFloat
                 top += UiMetrics.OpenCodeCardHeight;
             }
 
-            if (!ds || !go)
+            bool barAtEnd = !ds || !go;
+            if (barAtEnd)
             {
-                // Footer: 5px to the remaining card, then the normal 12px outer margin.
+                // At the top or bottom, use the same compact 5px padding on both sides.
                 refreshBar.Bounds = new Rectangle(UiMetrics.RefreshBarInset,
-                    (ds || go) ? top + barGap : pad, w - UiMetrics.RefreshBarWidthInset,
+                    (ds || go) ? top + barGap : barGap, w - UiMetrics.RefreshBarWidthInset,
                     UiMetrics.RefreshBarHeight);
                 top = refreshBar.Bottom;
             }
 
             refreshBar.Visible = true;
-            int height = top + pad;
+            int height = top + (barAtEnd ? barGap : pad);
             if (ClientSize.Height != height)
             {
                 ClientSize = new Size(ClientSize.Width, height);
@@ -1703,6 +1709,7 @@ namespace QuotaFloat
         private void StartDeepSeekFetch()
         {
             if (fetchingDeepSeek) return;
+            int version = ++deepSeekRequestVersion;
             fetchingDeepSeek = true;
             dsRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
             UpdateFetchUi();
@@ -1724,6 +1731,7 @@ namespace QuotaFloat
                     if (IsDisposed || !IsHandleCreated) return;
                     BeginInvoke(new Action(delegate
                     {
+                        if (version != deepSeekRequestVersion) return;
                         DeepSeekState state;
                         if (t.IsFaulted || t.IsCanceled)
                             state = new DeepSeekState
@@ -1743,6 +1751,7 @@ namespace QuotaFloat
         private void StartOpenCodeFetch()
         {
             if (fetchingOpenCode) return;
+            int version = ++openCodeRequestVersion;
             fetchingOpenCode = true;
             goRefreshButton.SetBusy(true, clock.ElapsedMilliseconds);
             UpdateFetchUi();
@@ -1764,6 +1773,7 @@ namespace QuotaFloat
                     if (IsDisposed || !IsHandleCreated) return;
                     BeginInvoke(new Action(delegate
                     {
+                        if (version != openCodeRequestVersion) return;
                         GoState state;
                         if (t.IsFaulted || t.IsCanceled)
                             state = new GoState
@@ -1778,6 +1788,22 @@ namespace QuotaFloat
                 }
                 catch { }
             });
+        }
+
+        private void InvalidateDeepSeekFetch()
+        {
+            deepSeekRequestVersion++;
+            fetchingDeepSeek = false;
+            dsRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
+        }
+
+        private void InvalidateOpenCodeFetch()
+        {
+            openCodeRequestVersion++;
+            fetchingOpenCode = false;
+            goRefreshButton.SetBusy(false, clock.ElapsedMilliseconds);
+            UpdateFetchUi();
         }
 
         private void UpdateFetchUi()
@@ -2096,7 +2122,7 @@ namespace QuotaFloat
                 CurrentRefreshSeconds(), AnyFetching ? "True" : "False",
                 OldestFetchAgeSeconds(),
                 displayRefreshHz, frameIntervalMilliseconds,
-                captureExcluded ? "excluded" : "visible",
+                captureExcluded ? (captureBlackedOut ? "black" : "excluded") : "visible",
                 highResolutionTimer ? "on" : "off",
                 fetchingDeepSeek ? "True" : "False",
                 fetchingOpenCode ? "True" : "False");
@@ -3417,7 +3443,8 @@ namespace QuotaFloat
         private void OpenSettings()
         {
             EnsureEdgeVisible();
-            string oldKey = cfg.DeepSeekKey;
+            string oldDeepSeekKey = cfg.DeepSeekKey;
+            string oldOpenCodeKey = cfg.OpenCodeKey;
             refreshingPaused = true;
             try
             {
@@ -3425,13 +3452,17 @@ namespace QuotaFloat
                 {
                     if (f.ShowDialog(this) == DialogResult.OK)
                     {
-                        if (cfg.DeepSeekKey != oldKey)
+                        bool deepSeekChanged = cfg.DeepSeekKey != oldDeepSeekKey;
+                        bool openCodeChanged = cfg.OpenCodeKey != oldOpenCodeKey;
+                        if (deepSeekChanged)
                         {
+                            InvalidateDeepSeekFetch();
                             lastDeepSeekBalanceKnown = false;
                             deepSeekStatus.Text = Strings.Loading;
                             deepSeekStatus.ForeColor = Palette.Sub;
                             UpdateDisplay();
                         }
+                        if (openCodeChanged) InvalidateOpenCodeFetch();
                         lastDeepSeekFetchStamp = Timing.NoStamp;
                         lastOpenCodeFetchStamp = Timing.NoStamp;
                         StartFetch();
@@ -3450,8 +3481,22 @@ namespace QuotaFloat
         private void ApplyCaptureVisibility()
         {
             if (!IsHandleCreated) return;
-            uint affinity = cfg.HideFromCapture ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
-            captureExcluded = SetWindowDisplayAffinity(Handle, affinity);
+            uint desired = WDA_NONE;
+            if (cfg.HideFromCapture)
+            {
+                desired = Environment.OSVersion.Version.Build >= CaptureExcludeMinBuild
+                    ? WDA_EXCLUDEFROMCAPTURE : WDA_MONITOR;
+            }
+
+            uint applied = desired;
+            bool appliedOk = SetWindowDisplayAffinity(Handle, applied);
+            if (!appliedOk && desired == WDA_EXCLUDEFROMCAPTURE)
+            {
+                applied = WDA_MONITOR;
+                appliedOk = SetWindowDisplayAffinity(Handle, applied);
+            }
+            captureExcluded = appliedOk && applied != WDA_NONE;
+            captureBlackedOut = appliedOk && applied == WDA_MONITOR;
         }
 
         private void SyncDisplayTiming()

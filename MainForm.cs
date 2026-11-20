@@ -26,7 +26,9 @@ namespace QuotaFloat
         private const int WM_THEMECHANGED = 0x031A;
         private const int WS_EX_TOOLWINDOW = 0x80;
         private const uint WDA_NONE = 0x00000000;
+        private const uint WDA_MONITOR = 0x00000001;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+        private const int CaptureExcludeMinBuild = 19041;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -68,6 +70,8 @@ namespace QuotaFloat
 
         private bool fetchingDeepSeek;
         private bool fetchingOpenCode;
+        private int deepSeekRequestVersion;
+        private int openCodeRequestVersion;
         private long lastDeepSeekFetchStamp = Timing.NoStamp;
         private long lastOpenCodeFetchStamp = Timing.NoStamp;
         private bool placed;
@@ -100,6 +104,7 @@ namespace QuotaFloat
         private int displayRefreshHz = Timing.DefaultRefreshHz;
         private bool highResolutionTimer;
         private bool captureExcluded;
+        private bool captureBlackedOut;
 
         private bool AnyFetching
         {
@@ -681,17 +686,18 @@ namespace QuotaFloat
                 top += UiMetrics.OpenCodeCardHeight;
             }
 
-            if (!ds || !go)
+            bool barAtEnd = !ds || !go;
+            if (barAtEnd)
             {
-                // Footer: 5px to the remaining card, then the normal 12px outer margin.
+                // At the top or bottom, use the same compact 5px padding on both sides.
                 refreshBar.Bounds = new Rectangle(UiMetrics.RefreshBarInset,
-                    (ds || go) ? top + barGap : pad, w - UiMetrics.RefreshBarWidthInset,
+                    (ds || go) ? top + barGap : barGap, w - UiMetrics.RefreshBarWidthInset,
                     UiMetrics.RefreshBarHeight);
                 top = refreshBar.Bottom;
             }
 
             refreshBar.Visible = true;
-            int height = top + pad;
+            int height = top + (barAtEnd ? barGap : pad);
             if (ClientSize.Height != height)
             {
                 ClientSize = new Size(ClientSize.Width, height);
