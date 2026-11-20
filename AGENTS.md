@@ -22,6 +22,36 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ./verify.ps1 -Tag v1.3.0 -Ch
 - 构建前若程序正在运行，需要先退出，否则 exe 被占用。
 - Debug 构建会生成 `QuotaFloat.debug.exe` 和控制台，仅用于本地调试。
 
+## Module responsibilities
+
+- `Program.cs`：进程入口、单实例 Mutex、TLS 初始化、消息循环。
+- `MainForm.cs`：窗口构造、基础布局、菜单、字段和定时器装配。
+- `MainForm.Window.cs`：窗口事件、拖动/拉伸、截图排除、显示器时序同步。
+- `MainForm.Edge.cs`：贴边吸附、滑出/恢复动画、边缘用量指示条。
+- `MainForm.UI.cs`：主题、语言、tooltip、demo 数据、显示刷新。
+- `MainForm.Fetch.cs`：DeepSeek/OpenCode 请求、结果应用和请求代次。
+- `MainForm.Cache.cs`：OpenCode 缓存、过期行显示、行数据应用。
+- `MainForm.Schedule.cs`：刷新间隔、失败退避、时间戳和到期判断。
+- `RefreshPolicy.cs`：不依赖 UI 的退避与剩余比例纯逻辑。
+- `DisplayTiming.cs`：显示器刷新率探测和帧间隔计算。
+- `Controls.cs`：Card、MiniBar、UsageRow、RefreshButton 自绘控件。
+- `Metrics.cs`：布局、时序、颜色语义之外的数值常量。
+- `Strings.cs`：全部双语 UI 文案和动态状态文本。
+- `AppConfig.cs`：配置持久化、DPAPI 和缓存字段。
+- `SettingsForm.cs`：API Key 设置窗口。
+
+## Coding conventions
+
+- 保持 C# 5 语法和 .NET Framework 4.x，不引入第三方运行时依赖。
+- 新增布局、时间、网络或绘制数值时，优先放入 `Metrics.cs` / `Timing` 并命名，不在调用处留裸数字。
+- 新增 UI 文案必须进入 `Strings.cs` 并使用中英文两套文本。
+- 自绘控件优先使用比例或已命名度量，避免再出现固定宽度小于字形宽度的问题。
+- 按“职责”拆分 partial 文件，不按函数数量机械拆分；不创建深层测试目录。
+- 修改配置结构时必须为新字段提供向后兼容默认值。
+- 修改版本时必须同步 `AssemblyInfo.cs`、README 中的版本说明和 release tag。
+- 不手工编辑 `QuotaFloat.single.cs`；先改拆分源码，再运行构建。
+
+
 ## Release and Git
 
 - Release 资产只能包含 `QuotaFloat.exe`；不上传 Debug exe 或任何 PDB。

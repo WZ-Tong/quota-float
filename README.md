@@ -128,7 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1 -Tag v1.3.0 -CheckRemote
 ```
 
-`verify.ps1` 会重新导出并检查 `QuotaFloat.single.cs` 是否已提交、程序集版本与 Release 二进制是否一致；带 `-Tag` 时校验 tag 与版本，带 `-CheckRemote` 时确认远端 Release 只包含 `QuotaFloat.exe`。仓库根目录的 `AGENTS.md` 记录了维护与发布约束；`.github/workflows/verify.yml` 在 Windows 上执行 Release/Debug 构建及上述源码/版本检查。
+`verify.ps1` 会重新导出并检查 `QuotaFloat.single.cs` 是否已提交、程序集版本与 Release 二进制是否一致；带 `-Tag` 时校验 tag 与版本，带 `-CheckRemote` 时确认远端 Release 只包含 `QuotaFloat.exe`。仓库根目录的 `AGENTS.md` 记录了维护与发布约束；`.github/workflows/verify.yml` 在 push、PR 或手动触发时执行 Release/Debug 构建及上述源码/版本检查，并把正式版 `QuotaFloat.exe` 上传为 CI artifact。
 
 ## 配置与隐私
 

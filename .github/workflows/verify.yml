@@ -3,6 +3,7 @@ name: verify
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   windows:
@@ -18,3 +19,9 @@ jobs:
       - name: Verify source and versions
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\verify.ps1
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuotaFloat
+          path: QuotaFloat.exe
+          if-no-files-found: error
